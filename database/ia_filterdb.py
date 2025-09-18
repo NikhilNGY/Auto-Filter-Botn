@@ -37,7 +37,6 @@ if SECOND_FILES_DATABASE_URL:
     second_collection = second_db[COLLECTION_NAME]
     second_collection.create_index([("file_name", TEXT)])
 
-
 # -------------------------
 # Helper functions
 # -------------------------
@@ -79,7 +78,7 @@ def unpack_new_file_id(new_file_id):
 async def save_file(media):
     file_id = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.file_name))
-    file_caption = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.caption))
+    file_caption = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.caption or ""))
 
     document = {
         '_id': file_id,
