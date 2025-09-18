@@ -12,17 +12,14 @@ import time
 import asyncio
 import uvloop
 from hydrogram import types, Client
-from hydrogram.errors import FloodWait
 from aiohttp import web
-from typing import Union, Optional, AsyncGenerator
+from typing import Union, AsyncGenerator
 
 from web import web_app
 from info import (
-    INDEX_CHANNELS, SUPPORT_GROUP, LOG_CHANNEL, API_ID,
-    API_HASH, BOT_TOKEN, PORT, BIN_CHANNEL, ADMINS,
-    SECOND_FILES_DATABASE_URL, FILES_DATABASE_URL
+    LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT
 )
-from utils import temp, check_premium
+from utils import temp
 from database.users_chats_db import db
 
 uvloop.install()
@@ -41,6 +38,8 @@ class Bot(Client):
     async def start(self):
         await super().start()
         temp.START_TIME = time.time()
+
+        # Load banned users and chats if any
         temp.BANNED_USERS, temp.BANNED_CHATS = await db.get_banned()
 
         # Handle restart notification
@@ -54,20 +53,18 @@ class Bot(Client):
             finally:
                 os.remove("restart.txt")
 
+        # Set bot info
         temp.BOT = self
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
         temp.B_NAME = me.first_name
 
-        # Start Web Server
+        # Start web server
         runner = web.AppRunner(web_app)
         await runner.setup()
         site = web.TCPSite(runner, "0.0.0.0", PORT)
         await site.start()
-
-        # Start premium checker task
-        asyncio.create_task(check_premium(self))
 
         # Notify log channel
         try:
