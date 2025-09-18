@@ -168,108 +168,62 @@ async def start(client, message):
         )
 
 # ------------------------------
-# Handle files: all / single
+# Handle single file only
 # ------------------------------
-if mc.startswith("all"):
-    _, grp_id, key = mc.split("_", 2)
-    files = temp.FILES.get(key)
-    if not files:
-        return await message.reply("No Such All Files Exist!")
+async def handle_file(client, message, mc):
+    type_, grp_id, file_id = mc.split("_", 2)
+    file = await get_file_details(file_id)
+    if not file:
+        return await message.reply("No Such File Exist!")
 
     settings = await get_settings(int(grp_id))
-    file_ids = []
-    total_files = await message.reply(f"<b><i>🗂 Total files - <code>{len(files)}</code></i></b>")
 
-    for file in files:
-        CAPTION = settings["caption"].format(
-            file_name=file["file_name"],
-            file_size=get_size(file["file_size"]),
-            file_caption=file["caption"]
-        )
-
-        # Buttons without stream
+    # Shortlink (all users can access, no premium)
+    if type_ != "shortlink" and settings["shortlink"]:
+        link = await get_shortlink(settings["url"], settings["api"], f"https://t.me/{temp.U_NAME}?start=shortlink_{grp_id}_{file_id}")
         btn = [
-            [
-                InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
-                InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
-            ],
-            [
-                InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
-            ]
+            [InlineKeyboardButton("♻️ Get File ♻️", url=link)],
+            [InlineKeyboardButton("📍 How to Open Link 📍", url=settings["tutorial"])]
         ]
-
-        msg = await client.send_cached_media(
-            chat_id=message.from_user.id,
-            file_id=file["_id"],
-            caption=CAPTION,
-            protect_content=False,
-            reply_markup=InlineKeyboardMarkup(btn)
+        return await message.reply(
+            f"[{get_size(file['file_size'])}] {file['file_name']}\n\nYour file is ready. 👍",
+            reply_markup=InlineKeyboardMarkup(btn),
+            protect_content=True
         )
-        file_ids.append(msg.id)
 
-    time = get_readable_time(PM_FILE_DELETE_TIME)
-    vp = await message.reply(f"⚠️ Files will auto-delete in {time}. Save them somewhere else!")
-    await asyncio.sleep(PM_FILE_DELETE_TIME)
-    buttons = [[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇs ᴀɢᴀɪɴ", callback_data=f"get_del_send_all_files#{grp_id}#{key}")]]
-    await client.delete_messages(chat_id=message.chat.id, message_ids=file_ids + [total_files.id])
-    return await vp.edit("Files deleted! Click below to get them again.", reply_markup=InlineKeyboardMarkup(buttons))
-
-
-# Single file
-type_, grp_id, file_id = mc.split("_", 2)
-file = await get_file_details(file_id)
-if not file:
-    return await message.reply("No Such File Exist!")
-
-settings = await get_settings(int(grp_id))
-
-# Shortlink: removed premium restriction
-if type_ != "shortlink" and settings["shortlink"]:
-    link = await get_shortlink(settings["url"], settings["api"], f"https://t.me/{temp.U_NAME}?start=shortlink_{grp_id}_{file_id}")
+    # Caption + buttons
+    CAPTION = settings["caption"].format(
+        file_name=file["file_name"],
+        file_size=get_size(file["file_size"]),
+        file_caption=file["caption"]
+    )
     btn = [
-        [InlineKeyboardButton("♻️ Get File ♻️", url=link)],
-        [InlineKeyboardButton("📍 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋ 📍", url=settings["tutorial"])]
+        [
+            InlineKeyboardButton("⚡️ Updates", url=UPDATES_LINK),
+            InlineKeyboardButton("💡 Support", url=SUPPORT_LINK)
+        ],
+        [
+            InlineKeyboardButton("⁉️ Close ⁉️", callback_data="close_data")
+        ]
     ]
-    return await message.reply(
-        f"[{get_size(file['file_size'])}] {file['file_name']}\n\nYour file is ready. 👍",
-        reply_markup=InlineKeyboardMarkup(btn),
-        protect_content=True
+
+    vp = await client.send_cached_media(
+        chat_id=message.from_user.id,
+        file_id=file_id,
+        caption=CAPTION,
+        protect_content=False,
+        reply_markup=InlineKeyboardMarkup(btn)
     )
 
-CAPTION = settings["caption"].format(
-    file_name=file["file_name"],
-    file_size=get_size(file["file_size"]),
-    file_caption=file["caption"]
-)
-
-# Buttons without stream
-btn = [
-    [
-        InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
-        InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
-    ],
-    [
-        InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
-    ]
-]
-
-vp = await client.send_cached_media(
-    chat_id=message.from_user.id,
-    file_id=file_id,
-    caption=CAPTION,
-    protect_content=False,
-    reply_markup=InlineKeyboardMarkup(btn)
-)
-time = get_readable_time(PM_FILE_DELETE_TIME)
-msg = await vp.reply(f"⚠️ This file will auto-delete in {time}. Save it somewhere else!")
-await asyncio.sleep(PM_FILE_DELETE_TIME)
-await msg.delete()
-await vp.delete()
-return await vp.reply(
-    "File deleted! Click below to get it again.",
-    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ", callback_data=f"get_del_file#{grp_id}#{file_id}")]])
-)
-
+    time = get_readable_time(PM_FILE_DELETE_TIME)
+    msg = await vp.reply(f"⚠️ This file will auto-delete in {time}. Save it somewhere else!")
+    await asyncio.sleep(PM_FILE_DELETE_TIME)
+    await msg.delete()
+    await vp.delete()
+    return await vp.reply(
+        "File deleted! Click below to get it again.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Get File Again", callback_data=f"get_del_file#{grp_id}#{file_id}")]])
+    )
 
 # ==========================================================
 # Index Channels Command: Show Indexed Channels Info
