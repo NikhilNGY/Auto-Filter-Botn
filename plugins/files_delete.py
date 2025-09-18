@@ -1,7 +1,26 @@
 from hydrogram import Client, filters
 from hydrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from info import DELETE_CHANNELS, ADMINS   # use info.py instead of settings
-from database.db import delete_files_by_name
+from info import DELETE_CHANNELS, ADMINS
+import motor.motor_asyncio
+import os
+
+# MongoDB setup
+DATABASE_URL = os.getenv("DATABASE_URI")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "AutoFilter")
+
+client = motor.motor_asyncio.AsyncIOMotorClient(DATABASE_URL)
+db = client[DATABASE_NAME]
+files = db["FILES"]
+
+# Delete function inside this file
+async def delete_files_by_name(query: str) -> int:
+    """
+    Delete all files from MongoDB where file_name matches the query.
+    Returns number of deleted documents.
+    """
+    result = await files.delete_many({"file_name": {"$regex": query, "$options": "i"}})
+    return result.deleted_count
+
 
 # Handle /delete command
 @Client.on_message(filters.command("delete") & filters.group)
@@ -11,7 +30,7 @@ async def delete_files(client, message):
 
     try:
         query = message.text.split(" ", 1)[1]
-    except IndexError:
+    except:
         return await message.reply_text("⚠️ Usage: /delete <query>")
 
     if message.chat.id not in DELETE_CHANNELS:
