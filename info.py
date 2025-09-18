@@ -9,9 +9,6 @@ logging.basicConfig(level=logging.INFO)
 
 # ---------------- HELPERS ---------------- #
 def is_enabled(env_name: str, default: bool) -> bool:
-    """
-    Convert environment variable values into boolean flags.
-    """
     data = environ.get(env_name, str(default)).lower()
     if data in ["true", "yes", "1", "enable", "y"]:
         return True
@@ -23,20 +20,16 @@ def is_enabled(env_name: str, default: bool) -> bool:
 
 
 def is_valid_ip(ip: str) -> bool:
-    """
-    Validate if the given string is a valid IPv4 address.
-    """
-    ip_pattern = r"^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." \
-                 r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." \
-                 r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." \
-                 r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    ip_pattern = (
+        r"^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+        r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+        r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+        r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    )
     return re.match(ip_pattern, ip) is not None
 
 
 def get_required_env(name: str) -> str:
-    """
-    Fetch required environment variable or exit if missing.
-    """
     value = environ.get(name, "").strip()
     if not value:
         logger.error(f"{name} is missing. Exiting now.")
@@ -45,9 +38,6 @@ def get_required_env(name: str) -> str:
 
 
 def get_int_env(name: str, default: int) -> int:
-    """
-    Convert environment variable into int safely.
-    """
     try:
         return int(environ.get(name, default))
     except ValueError:
@@ -55,7 +45,7 @@ def get_int_env(name: str, default: int) -> int:
         exit(1)
 
 
-# ---------------- BOT INFORMATION ---------------- #
+# ---------------- BOT INFO ---------------- #
 API_ID = int(get_required_env("API_ID"))
 API_HASH = get_required_env("API_HASH")
 BOT_TOKEN = get_required_env("BOT_TOKEN")
@@ -63,20 +53,16 @@ BOT_ID = int(BOT_TOKEN.split(":")[0])
 PORT = get_int_env("PORT", 8080)
 
 # ---------------- IMAGES ---------------- #
-PICS = environ.get("PICS", "").split() or [
-    "https://i.postimg.cc/8C15CQ5y/1.png"
-]
+PICS = environ.get("PICS", "").split() or ["https://i.postimg.cc/8C15CQ5y/1.png"]
 
 # ---------------- ADMINS ---------------- #
 ADMINS = [int(x) for x in get_required_env("ADMINS").split()]
 
-# ---------------- CHANNELS & GROUPS ---------------- #
-INDEX_CHANNELS = [
-    int(x) if x.startswith("-") else x
-    for x in environ.get("INDEX_CHANNELS", "").split()
-]
+# ---------------- CHANNELS ---------------- #
+INDEX_CHANNELS = [int(x) if x.startswith("-") else x for x in environ.get("INDEX_CHANNELS", "").split()]
 LOG_CHANNEL = int(get_required_env("LOG_CHANNEL"))
 SUPPORT_GROUP = int(get_required_env("SUPPORT_GROUP"))
+BIN_CHANNEL = int(get_required_env("BIN_CHANNEL"))
 
 # ---------------- DATABASES ---------------- #
 DATA_DATABASE_URL = get_required_env("DATA_DATABASE_URL")
@@ -99,16 +85,13 @@ DELETE_TIME = get_int_env("DELETE_TIME", 3600)
 CACHE_TIME = get_int_env("CACHE_TIME", 300)
 MAX_BTN = get_int_env("MAX_BTN", 8)
 
-LANGUAGES = [
-    x.lower() for x in environ.get(
-        "LANGUAGES", "hindi english telugu tamil kannada malayalam marathi punjabi"
-    ).split()
-]
-QUALITY = [
-    x.lower() for x in environ.get(
-        "QUALITY", "360p 480p 720p 1080p 2160p"
-    ).split()
-]
+LANGUAGES = [x.lower() for x in environ.get(
+    "LANGUAGES", "hindi english telugu tamil kannada malayalam marathi punjabi"
+).split()]
+
+QUALITY = [x.lower() for x in environ.get(
+    "QUALITY", "360p 480p 720p 1080p 2160p"
+).split()]
 
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", script.IMDB_TEMPLATE)
 FILE_CAPTION = environ.get("FILE_CAPTION", script.FILE_CAPTION)
@@ -117,9 +100,7 @@ WELCOME_TEXT = environ.get("WELCOME_TEXT", script.WELCOME_TEXT)
 SHORTLINK_URL = environ.get("SHORTLINK_URL", "vplink.in")
 SHORTLINK_API = environ.get("SHORTLINK_API", "")
 VERIFY_EXPIRE = get_int_env("VERIFY_EXPIRE", 86400)
-INDEX_EXTENSIONS = [
-    x.lower() for x in environ.get("INDEX_EXTENSIONS", "mp4 mkv").split()
-]
+INDEX_EXTENSIONS = [x.lower() for x in environ.get("INDEX_EXTENSIONS", "mp4 mkv").split()]
 PM_FILE_DELETE_TIME = get_int_env("PM_FILE_DELETE_TIME", 3600)
 
 # ---------------- BOOLEAN FLAGS ---------------- #
@@ -134,15 +115,7 @@ IMDB = is_enabled("IMDB", False)
 SPELL_CHECK = is_enabled("SPELL_CHECK", True)
 SHORTLINK = is_enabled("SHORTLINK", False)
 
-# ---------------- STREAMING ---------------- #
-IS_STREAM = is_enabled("IS_STREAM", False)
-BIN_CHANNEL = int(get_required_env("BIN_CHANNEL"))
-
-# Channels where bot can delete files
-DELETE_CHANNELS = [
-    int(x) for x in environ.get("DELETE_CHANNELS", "").split()
-]
-
+# ---------------- URL ---------------- #
 URL = get_required_env("URL")
 if URL.startswith(("https://", "http://")):
     if not URL.endswith("/"):
@@ -164,15 +137,3 @@ STICKERS = environ.get(
     "CAACAgIAAxkBAAEN4ctnu1NdZUe21tiqF1CjLCZW8rJ28QACmQwAAj9UAUrPkwx5a8EilDYE "
     "CAACAgIAAxkBAAEN1pBntL9sz1tuP_qo0bCdLj_xQa28ngACxgEAAhZCawpKI9T0ydt5RzYE"
 ).split()
-
-# ---------------- PREMIUM ---------------- #
-IS_PREMIUM = is_enabled("IS_PREMIUM", False)
-PRE_DAY_AMOUNT = get_int_env("PRE_DAY_AMOUNT", 10)
-
-UPI_ID = environ.get("UPI_ID", "")
-UPI_NAME = environ.get("UPI_NAME", "")
-RECEIPT_SEND_USERNAME = environ.get("RECEIPT_SEND_USERNAME", "@Hansaka_Anuhas")
-
-if not UPI_ID or not UPI_NAME:
-    logger.warning("IS_PREMIUM disabled due to missing UPI details.")
-    IS_PREMIUM = False
