@@ -13,8 +13,6 @@ imdb = Cinemagoer()
 
 class temp:
     START_TIME = 0
-    BANNED_USERS = []
-    BANNED_CHATS = []
     ME = None
     CANCEL = False
     U_NAME = None
@@ -25,13 +23,11 @@ class temp:
     USERS_CANCEL = False
     GROUPS_CANCEL = False
     BOT = None
-    PREMIUM = {}
 
 
 async def is_subscribed(bot, query):
+    """Check if user is subscribed to required channels."""
     btn = []
-    if await is_premium(query.from_user.id, bot):
-        return btn
     stg = db.get_bot_sttgs()
     if not stg or not stg.get('FORCE_SUB_CHANNELS'):
         return btn
@@ -41,18 +37,11 @@ async def is_subscribed(bot, query):
             await bot.get_chat_member(int(id), query.from_user.id)
         except UserNotParticipant:
             btn.append([InlineKeyboardButton(f'Join : {chat.title}', url=chat.invite_link)])
-    if stg and stg.get('REQUEST_FORCE_SUB_CHANNELS') and not db.find_join_req(query.from_user.id):
-        id = stg.get('REQUEST_FORCE_SUB_CHANNELS')
-        chat = await bot.get_chat(int(id))
-        try:
-            await bot.get_chat_member(int(id), query.from_user.id)
-        except UserNotParticipant:
-            url = await bot.create_chat_invite_link(int(id), creates_join_request=True)
-            btn.append([InlineKeyboardButton(f'Request : {chat.title}', url=url.invite_link)])
     return btn
 
 
 def upload_image(file_path):
+    """Upload image to uguu.se."""
     try:
         with open(file_path, 'rb') as f:
             files = {'files[]': f}
@@ -66,32 +55,27 @@ def upload_image(file_path):
 
 
 async def get_poster(query, bulk=False, id=False, file=None):
+    """Fetch movie/TV info from IMDB."""
     try:
         if not id:
             query = query.strip().lower()
             title = query
             year = re.findall(r'[1-2]\d{3}$', query, re.IGNORECASE)
+            year = str(year[0]) if year else None
             if year:
-                year = str(year[0])
                 title = query.replace(year, "").strip()
             elif file:
                 year = re.findall(r'[1-2]\d{3}', file, re.IGNORECASE)
                 year = str(year[0]) if year else None
-            else:
-                year = None
 
             movieid_list = imdb.search_movie(title, results=10)
             if not movieid_list:
                 return None
             if year:
-                filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid_list))
-                if not filtered:
-                    filtered = movieid_list
+                filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid_list)) or movieid_list
             else:
                 filtered = movieid_list
-            filtered = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered))
-            if not filtered:
-                filtered = movieid_list
+            filtered = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered)) or movieid_list
             if bulk:
                 return filtered
             movieid = filtered[0].movieID
@@ -100,11 +84,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
 
         movie = imdb.get_movie(movieid)
         date = movie.get("original air date") or movie.get("year") or "N/A"
-
-        if not LONG_IMDB_DESCRIPTION:
-            plot = (movie.get('plot') or ["N/A"])[0]
-        else:
-            plot = movie.get('plot outline') or "N/A"
+        plot = (movie.get('plot') or ["N/A"])[0] if not LONG_IMDB_DESCRIPTION else movie.get('plot outline') or "N/A"
         if plot and len(plot) > 800:
             plot = plot[:800] + "..."
 
@@ -142,6 +122,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
 
 
 async def is_check_admin(bot, chat_id, user_id):
+    """Check if a user is admin/owner."""
     try:
         member = await bot.get_chat_member(chat_id, user_id)
         return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
@@ -150,6 +131,7 @@ async def is_check_admin(bot, chat_id, user_id):
 
 
 async def get_verify_status(user_id):
+    """Return user verification status."""
     verify = temp.VERIFICATIONS.get(user_id)
     if not verify:
         verify = await db.get_verify_status(user_id)
@@ -158,6 +140,7 @@ async def get_verify_status(user_id):
 
 
 async def update_verify_status(user_id, verify_token="", is_verified=False, link="", expire_time=0):
+    """Update verification data for user."""
     current = await get_verify_status(user_id)
     current.update({
         'verify_token': verify_token,
@@ -169,75 +152,8 @@ async def update_verify_status(user_id, verify_token="", is_verified=False, link
     await db.update_verify_status(user_id, current)
 
 
-async def is_premium(user_id, bot):
-    if not IS_PREMIUM or user_id in ADMINS:
-        return True
-    mp = db.get_plan(user_id)
-    if mp.get('premium'):
-        if mp.get('expire') and mp['expire'] < datetime.now():
-            try:
-                await bot.send_message(
-                    user_id,
-                    f"Your premium {mp['plan']} plan expired on {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}. Use /plan to renew."
-                )
-            except Exception:
-                pass
-            mp.update({'expire': '', 'plan': '', 'premium': False})
-            db.update_plan(user_id, mp)
-            return False
-        return True
-    return False
-
-
-async def check_premium(bot):
-    while True:
-        for p in db.get_premium_users():
-            mp = p['status']
-            if mp.get('premium') and mp.get('expire') < datetime.now():
-                try:
-                    await bot.send_message(
-                        p['id'],
-                        f"Your premium {mp['plan']} plan expired on {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}. Use /plan to renew."
-                    )
-                except Exception:
-                    pass
-                mp.update({'expire': '', 'plan': '', 'premium': False})
-                db.update_plan(p['id'], mp)
-        await asyncio.sleep(1200)
-
-
-async def broadcast_messages(user_id, message, pin):
-    try:
-        m = await message.copy(chat_id=user_id)
-        if pin:
-            await m.pin(both_sides=True)
-        return "Success"
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        return await broadcast_messages(user_id, message, pin)
-    except Exception:
-        await db.delete_user(user_id)
-        return "Error"
-
-
-async def groups_broadcast_messages(chat_id, message, pin):
-    try:
-        k = await message.copy(chat_id=chat_id)
-        if pin:
-            try:
-                await k.pin()
-            except Exception:
-                pass
-        return "Success"
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        return await groups_broadcast_messages(chat_id, message, pin)
-    except Exception:
-        await db.delete_chat(chat_id)
-        return "Error"
-
-
 async def get_settings(group_id):
+    """Return settings for a group."""
     settings = temp.SETTINGS.get(group_id)
     if not settings:
         settings = await db.get_settings(group_id)
@@ -246,6 +162,7 @@ async def get_settings(group_id):
 
 
 async def save_group_settings(group_id, key, value):
+    """Update a single group setting."""
     current = await get_settings(group_id)
     current[key] = value
     temp.SETTINGS[group_id] = current
@@ -253,6 +170,7 @@ async def save_group_settings(group_id, key, value):
 
 
 def get_size(size):
+    """Return human-readable size string."""
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
     i = 0
@@ -263,12 +181,14 @@ def get_size(size):
 
 
 def list_to_str(lst):
+    """Convert a list to a string."""
     if not lst:
         return "N/A"
     return ", ".join(str(x) for x in lst) if len(lst) > 1 else str(lst[0])
 
 
 async def get_shortlink(url, api, link):
+    """Generate a shortlink."""
     try:
         shortzy = Shortzy(api_key=api, base_site=url)
         return await shortzy.convert(link)
@@ -277,6 +197,7 @@ async def get_shortlink(url, api, link):
 
 
 def get_readable_time(seconds):
+    """Return time in d/h/m/s format."""
     periods = [('d', 86400), ('h', 3600), ('m', 60), ('s', 1)]
     result = ""
     for name, sec in periods:
@@ -287,6 +208,7 @@ def get_readable_time(seconds):
 
 
 def get_wish():
+    """Return greeting based on local time."""
     hour = int(datetime.now(pytz.timezone(TIME_ZONE)).strftime("%H"))
     if hour < 12:
         return "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞"
@@ -297,6 +219,7 @@ def get_wish():
 
 
 async def get_seconds(time_string):
+    """Convert time string like '2h', '5min' to seconds."""
     units_map = {"s": 1, "min": 60, "hour": 3600, "day": 86400, "month": 86400*30, "year": 86400*365}
     value = int(''.join(filter(str.isdigit, time_string)) or 0)
     unit = ''.join(filter(str.isalpha, time_string))
