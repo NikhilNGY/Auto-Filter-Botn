@@ -138,6 +138,11 @@ SHORTLINK = is_enabled("SHORTLINK", False)
 IS_STREAM = is_enabled("IS_STREAM", False)
 BIN_CHANNEL = int(get_required_env("BIN_CHANNEL"))
 
+# Channels where bot can delete files
+DELETE_CHANNELS = [
+    int(x) for x in environ.get("DELETE_CHANNELS", "").split()
+]
+
 URL = get_required_env("URL")
 if URL.startswith(("https://", "http://")):
     if not URL.endswith("/"):
