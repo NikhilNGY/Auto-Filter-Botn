@@ -1,31 +1,36 @@
-from hydrogram import Client, filters
-from hydrogram.errors import MessageTooLong
 import sys
 import os
 import traceback
 from io import StringIO
+from hydrogram import Client, filters
+from hydrogram.errors import MessageTooLong
 from info import ADMINS
 
 @Client.on_message(filters.command("eval") & filters.user(ADMINS))
 async def executor(client, message):
+    # Get code
     try:
         code = message.text.split(" ", 1)[1]
-    except:
-        return await message.reply('Command Incomplete!\nUsage: /eval your_python_code')
-    old_stderr = sys.stderr
-    old_stdout = sys.stdout
-    redirected_output = sys.stdout = StringIO()
-    redirected_error = sys.stderr = StringIO()
-    stdout, stderr, exc = None, None, None
+    except IndexError:
+        return await message.reply("Command Incomplete!\nUsage: /eval your_python_code")
+
+    # Redirect stdout and stderr
+    old_stdout, old_stderr = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = StringIO(), StringIO()
+    exc = None
+
     try:
+        # Run async code
         await aexec(code, client, message)
-    except:
+    except Exception:
         exc = traceback.format_exc()
-    stdout = redirected_output.getvalue()
-    stderr = redirected_error.getvalue()
-    sys.stdout = old_stdout
-    sys.stderr = old_stderr
-    evaluation = ""
+
+    # Capture output
+    stdout = sys.stdout.getvalue()
+    stderr = sys.stderr.getvalue()
+    sys.stdout, sys.stderr = old_stdout, old_stderr
+
+    # Prepare final output
     if exc:
         evaluation = exc
     elif stderr:
@@ -34,20 +39,23 @@ async def executor(client, message):
         evaluation = stdout
     else:
         evaluation = "Success!"
+
     final_output = f"Output:\n\n<code>{evaluation}</code>"
+
+    # Send output
     try:
         await message.reply(final_output)
     except MessageTooLong:
-        with open('eval.txt', 'w+') as outfile:
-            outfile.write(final_output)
-        await message.reply_document('eval.txt')
-        os.remove('eval.txt')
+        with open("eval.txt", "w+", encoding="utf-8") as f:
+            f.write(final_output)
+        await message.reply_document("eval.txt")
+        os.remove("eval.txt")
 
 
 async def aexec(code, client, message):
+    """Executes asynchronous Python code dynamically."""
     exec(
-        "async def __aexec(client, message): "
-        + "".join(f"\n {a}" for a in code.split("\n"))
+        f"async def __aexec(client, message):\n"
+        + "".join(f"    {line}\n" for line in code.split("\n"))
     )
     return await locals()["__aexec"](client, message)
-
