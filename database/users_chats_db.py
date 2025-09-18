@@ -1,7 +1,15 @@
 from pymongo import MongoClient
-from info import BOT_ID, ADMINS, DATABASE_NAME, DATA_DATABASE_URL, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, IMDB_TEMPLATE, WELCOME_TEXT, LINK_MODE, TUTORIAL, SHORTLINK_URL, SHORTLINK_API, SHORTLINK, FILE_CAPTION, IMDB, WELCOME, SPELL_CHECK, PROTECT_CONTENT, AUTO_DELETE, IS_STREAM, VERIFY_EXPIRE
-from datetime import datetime, timedelta
+from info import (
+    BOT_ID, ADMINS, DATABASE_NAME, DATA_DATABASE_URL, FILES_DATABASE_URL,
+    SECOND_FILES_DATABASE_URL, IMDB_TEMPLATE, WELCOME_TEXT, LINK_MODE,
+    TUTORIAL, SHORTLINK_URL, SHORTLINK_API, SHORTLINK, FILE_CAPTION,
+    IMDB, WELCOME, SPELL_CHECK, PROTECT_CONTENT, AUTO_DELETE, VERIFY_EXPIRE
+)
+from datetime import datetime
 
+# -------------------------
+# Initialize databases
+# -------------------------
 files_db_client = MongoClient(FILES_DATABASE_URL)
 files_db = files_db_client[DATABASE_NAME]
 
@@ -12,6 +20,10 @@ if SECOND_FILES_DATABASE_URL:
     second_files_db_client = MongoClient(SECOND_FILES_DATABASE_URL)
     second_files_db = second_files_db_client[DATABASE_NAME]
 
+
+# -------------------------
+# Database class
+# -------------------------
 class Database:
     default_setgs = {
         'file_secure': PROTECT_CONTENT,
@@ -37,35 +49,22 @@ class Database:
         'expire_time': 0
     }
 
-    default_prm = {
-        'expire': '',
-        'trial': False,
-        'plan': '',
-        'premium': False
-    }
-
     def __init__(self):
         self.col = data_db.Users
         self.grp = data_db.Groups
-        self.prm = data_db.Premiums
         self.req = data_db.Requests
         self.con = data_db.Connections
         self.stg = data_db.Settings
 
+    # -------------------------
+    # User methods
+    # -------------------------
     def new_user(self, id, name):
         return {
             'id': id,
             'name': name,
             'ban_status': {'is_banned': False, 'ban_reason': ""},
             'verify_status': self.default_verify
-        }
-
-    def new_group(self, id, title):
-        return {
-            'id': id,
-            'title': title,
-            'chat_status': {'is_disabled': False, 'reason': ""},
-            'settings': self.default_setgs
         }
 
     async def add_user(self, id, name):
@@ -77,38 +76,34 @@ class Database:
     async def total_users_count(self):
         return self.col.count_documents({})
 
-    async def remove_ban(self, id):
-        self.col.update_one({'id': int(id)}, {'$set': {'ban_status': {'is_banned': False, 'ban_reason': ''}}})
-
-    async def ban_user(self, user_id, ban_reason="No Reason"):
-        self.col.update_one({'id': int(user_id)}, {'$set': {'ban_status': {'is_banned': True, 'ban_reason': ban_reason}}})
-
-    async def get_ban_status(self, id):
-        user = self.col.find_one({'id': int(id)})
-        return user.get('ban_status', {'is_banned': False, 'ban_reason': ''}) if user else {'is_banned': False, 'ban_reason': ''}
-
     async def get_all_users(self):
         return list(self.col.find({}))
 
     async def delete_user(self, user_id):
         self.col.delete_many({'id': int(user_id)})
 
-    async def delete_chat(self, grp_id):
-        self.grp.delete_many({'id': int(grp_id)})
+    async def get_verify_status(self, user_id):
+        user = self.col.find_one({'id': int(user_id)})
+        if user:
+            info = user.get('verify_status', self.default_verify)
+            if info.get('expire_time') == 0:
+                info['expire_time'] = info.get('verified_time', 0) + VERIFY_EXPIRE
+            return info
+        return self.default_verify
 
-    def find_join_req(self, id):
-        return bool(self.req.find_one({'id': id}))
+    async def update_verify_status(self, user_id, verify):
+        self.col.update_one({'id': int(user_id)}, {'$set': {'verify_status': verify}})
 
-    def add_join_req(self, id):
-        self.req.insert_one({'id': id})
-
-    def del_join_req(self):
-        self.req.drop()
-
-    async def get_banned(self):
-        users = self.col.find({'ban_status.is_banned': True})
-        chats = self.grp.find({'chat_status.is_disabled': True})
-        return [u['id'] for u in users], [c['id'] for c in chats]
+    # -------------------------
+    # Group methods
+    # -------------------------
+    def new_group(self, id, title):
+        return {
+            'id': id,
+            'title': title,
+            'chat_status': {'is_disabled': False, 'reason': ""},
+            'settings': self.default_setgs
+        }
 
     async def add_chat(self, chat, title):
         self.grp.insert_one(self.new_group(chat, title))
@@ -130,51 +125,18 @@ class Database:
     async def disable_chat(self, chat, reason="No Reason"):
         self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': {'is_disabled': True, 'reason': reason}}})
 
-    async def get_verify_status(self, user_id):
-        user = self.col.find_one({'id': int(user_id)})
-        if user:
-            info = user.get('verify_status', self.default_verify)
-            if info.get('expire_time') == 0:
-                info['expire_time'] = info.get('verified_time', 0) + VERIFY_EXPIRE
-            return info
-        return self.default_verify
-
-    async def update_verify_status(self, user_id, verify):
-        self.col.update_one({'id': int(user_id)}, {'$set': {'verify_status': verify}})
-
     async def total_chat_count(self):
         return self.grp.count_documents({})
 
     async def get_all_chats(self):
         return list(self.grp.find({}))
 
-    async def get_files_db_size(self):
-        return files_db.command("dbstats")['dataSize']
-
-    async def get_second_files_db_size(self):
-        if SECOND_FILES_DATABASE_URL:
-            return second_files_db.command("dbstats")['dataSize']
-        return 0
-
-    async def get_data_db_size(self):
-        return data_db.command("dbstats")['dataSize']
-
     async def get_all_chats_count(self):
         return self.grp.count_documents({})
 
-    def get_plan(self, id):
-        st = self.prm.find_one({'id': id})
-        return st['status'] if st else self.default_prm
-
-    def update_plan(self, id, data):
-        self.prm.update_one({'id': id}, {'$set': {'status': data}}, upsert=True)
-
-    def get_premium_count(self):
-        return self.prm.count_documents({'status.premium': True})
-
-    def get_premium_users(self):
-        return list(self.prm.find({}))
-
+    # -------------------------
+    # Connections
+    # -------------------------
     def add_connect(self, group_id, user_id):
         user = self.con.find_one({'_id': user_id})
         if user:
@@ -187,10 +149,29 @@ class Database:
         user = self.con.find_one({'_id': user_id})
         return user.get("group_ids", []) if user else []
 
+    # -------------------------
+    # Bot settings
+    # -------------------------
     def update_bot_sttgs(self, var, val):
         self.stg.update_one({'id': BOT_ID}, {'$set': {var: val}}, upsert=True)
 
     def get_bot_sttgs(self):
         return self.stg.find_one({'id': BOT_ID})
 
+    # -------------------------
+    # Database sizes
+    # -------------------------
+    async def get_files_db_size(self):
+        return files_db.command("dbstats")['dataSize']
+
+    async def get_second_files_db_size(self):
+        if SECOND_FILES_DATABASE_URL:
+            return second_files_db.command("dbstats")['dataSize']
+        return 0
+
+    async def get_data_db_size(self):
+        return data_db.command("dbstats")['dataSize']
+
+
+# Initialize DB object
 db = Database()
