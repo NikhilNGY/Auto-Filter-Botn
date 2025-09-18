@@ -3,16 +3,17 @@ import os
 import traceback
 from io import StringIO
 from hydrogram import Client, filters
-from hydrogram.errors import MessageTooLong
+from hydrogram.errors.exceptions.bad_request_400 import MessageTooLong
 from info import ADMINS
 
+# ---------------- /eval Command ---------------- #
 @Client.on_message(filters.command("eval") & filters.user(ADMINS))
 async def executor(client, message):
-    # Get code
+    # Extract code
     try:
         code = message.text.split(" ", 1)[1]
     except IndexError:
-        return await message.reply("Command Incomplete!\nUsage: /eval your_python_code")
+        return await message.reply("Command incomplete!\nUsage: /eval your_python_code")
 
     # Redirect stdout and stderr
     old_stdout, old_stderr = sys.stdout, sys.stderr
@@ -20,7 +21,7 @@ async def executor(client, message):
     exc = None
 
     try:
-        # Run async code
+        # Execute async code
         await aexec(code, client, message)
     except Exception:
         exc = traceback.format_exc()
@@ -30,7 +31,7 @@ async def executor(client, message):
     stderr = sys.stderr.getvalue()
     sys.stdout, sys.stderr = old_stdout, old_stderr
 
-    # Prepare final output
+    # Determine final output
     if exc:
         evaluation = exc
     elif stderr:
@@ -38,11 +39,11 @@ async def executor(client, message):
     elif stdout:
         evaluation = stdout
     else:
-        evaluation = "Success!"
+        evaluation = "✅ Success!"
 
     final_output = f"Output:\n\n<code>{evaluation}</code>"
 
-    # Send output
+    # Send output (handle long messages)
     try:
         await message.reply(final_output)
     except MessageTooLong:
