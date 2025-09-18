@@ -75,17 +75,11 @@ async def start(client, message):
     # ------------------------------
     if (len(message.command) != 2) or message.command[1] == "start":
         buttons = [[
-            InlineKeyboardButton("+ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ +", url=f"http://t.me/{temp.U_NAME}?startgroup=start")
-        ],[
-            InlineKeyboardButton("ℹ️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
-            InlineKeyboardButton("🧑‍💻 sᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
-        ],[
-            InlineKeyboardButton("👨‍🚒 ʜᴇʟᴘ", callback_data="help"),
-            InlineKeyboardButton("🔎 sᴇᴀʀᴄʜ ɪɴʟɪɴᴇ", switch_inline_query_current_chat=""),
-            InlineKeyboardButton("📚 ᴀʙᴏᴜᴛ", callback_data="about")
-        ],[
-            InlineKeyboardButton("🤑 Buy Premium", url=f"https://t.me/{temp.U_NAME}?start=premium")
-        ]]
+            InlineKeyboardButton('⚔️   Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ  ⚔️', url=f'https://t.me/+pCz5eoun5Zk5YzRl')
+                ],[
+                    InlineKeyboardButton('🎞 Mᴀɪɴ Gʀᴏᴜᴘ ', url=f"https://t.me/Sandalwood_Kannada_Group"),
+                    InlineKeyboardButton('🆕 Mᴀɪɴ Cʜᴀɴɴᴇʟ ', url="https://t.me/KR_PICTURE")
+                ]]
         return await message.reply_photo(
             photo=random.choice(PICS),
             caption=script.START_TXT.format(message.from_user.mention, get_wish()),
@@ -168,146 +162,113 @@ async def start(client, message):
         btn.append([InlineKeyboardButton("🔁 Try Again 🔁", callback_data=f"checksub#{mc}")])
         return await message.reply_photo(
             photo=random.choice(PICS),
-            caption=f"👋 Hello {message.from_user.mention},\n\nPlease join my 'Updates Channel' and try again. 😇",
+            caption=f"""ನಮಸ್ಕಾರ {message.from_user.mention} 🙏  ,\n \nಚಲನಚಿತ್ರವನ್ನು ಪಡೆಯಲು "JOIN CHANNEL" ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಿ ಮತ್ತು ಚಾನಲ್‌ನಲ್ಲಿ ಸೇರಿಕೊಳ್ಳಿ.\n \n─────── • ◆ • ──────\n \nYou Need to Join My Channel to Receive the Movie file. CLICK BUTTON 👇👇""",
             reply_markup=InlineKeyboardMarkup(btn),
             parse_mode=enums.ParseMode.HTML
         )
 
-    # ------------------------------
-    # Handle files: all / single
-    # ------------------------------
-    if mc.startswith("all"):
-        _, grp_id, key = mc.split("_", 2)
-        files = temp.FILES.get(key)
-        if not files:
-            return await message.reply("No Such All Files Exist!")
-
-        settings = await get_settings(int(grp_id))
-        file_ids = []
-        total_files = await message.reply(f"<b><i>🗂 Total files - <code>{len(files)}</code></i></b>")
-
-        for file in files:
-            CAPTION = settings["caption"].format(
-                file_name=file["file_name"],
-                file_size=get_size(file["file_size"]),
-                file_caption=file["caption"]
-            )
-            if IS_STREAM:
-                btn = [[InlineKeyboardButton("✛ ᴡᴀᴛᴄʜ & ᴅᴏᴡɴʟᴏᴀᴅ ✛", callback_data=f"stream#{file['_id']}")]]
-            else:
-                btn = []
-            btn += [[
-                InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
-                InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
-            ],[
-                InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
-            ]]
-
-            msg = await client.send_cached_media(
-                chat_id=message.from_user.id,
-                file_id=file["_id"],
-                caption=CAPTION,
-                protect_content=False,
-                reply_markup=InlineKeyboardMarkup(btn)
-            )
-            file_ids.append(msg.id)
-
-        time = get_readable_time(PM_FILE_DELETE_TIME)
-        vp = await message.reply(f"⚠️ Files will auto-delete in {time}. Save them somewhere else!")
-        await asyncio.sleep(PM_FILE_DELETE_TIME)
-        buttons = [[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇs ᴀɢᴀɪɴ", callback_data=f"get_del_send_all_files#{grp_id}#{key}")]]
-        await client.delete_messages(chat_id=message.chat.id, message_ids=file_ids + [total_files.id])
-        return await vp.edit("Files deleted! Click below to get them again.", reply_markup=InlineKeyboardMarkup(buttons))
-
-    # Single file
-    type_, grp_id, file_id = mc.split("_", 2)
-    file = await get_file_details(file_id)
-    if not file:
-        return await message.reply("No Such File Exist!")
+# ------------------------------
+# Handle files: all / single
+# ------------------------------
+if mc.startswith("all"):
+    _, grp_id, key = mc.split("_", 2)
+    files = temp.FILES.get(key)
+    if not files:
+        return await message.reply("No Such All Files Exist!")
 
     settings = await get_settings(int(grp_id))
+    file_ids = []
+    total_files = await message.reply(f"<b><i>🗂 Total files - <code>{len(files)}</code></i></b>")
 
-    # Shortlink check
-    if type_ != "shortlink" and settings["shortlink"] and not await is_premium(message.from_user.id, client):
-        link = await get_shortlink(settings["url"], settings["api"], f"https://t.me/{temp.U_NAME}?start=shortlink_{grp_id}_{file_id}")
-        btn = [
-            [InlineKeyboardButton("♻️ Get File ♻️", url=link)],
-            [InlineKeyboardButton("📍 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋ 📍", url=settings["tutorial"])]
-        ]
-        return await message.reply(
-            f"[{get_size(file['file_size'])}] {file['file_name']}\n\nYour file is ready. 👍",
-            reply_markup=InlineKeyboardMarkup(btn),
-            protect_content=True
+    for file in files:
+        CAPTION = settings["caption"].format(
+            file_name=file["file_name"],
+            file_size=get_size(file["file_size"]),
+            file_caption=file["caption"]
         )
 
-    CAPTION = settings["caption"].format(
-        file_name=file["file_name"],
-        file_size=get_size(file["file_size"]),
-        file_caption=file["caption"]
-    )
-    if IS_STREAM:
-        btn = [[InlineKeyboardButton("✛ ᴡᴀᴛᴄʜ & ᴅᴏᴡɴʟᴏᴀᴅ ✛", callback_data=f"stream#{file_id}")]]
-    else:
-        btn = []
-    btn += [[
-        InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
-        InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
-    ],[
-        InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
-    ]]
-
-    vp = await client.send_cached_media(
-        chat_id=message.from_user.id,
-        file_id=file_id,
-        caption=CAPTION,
-        protect_content=False,
-        reply_markup=InlineKeyboardMarkup(btn)
-    )
-    time = get_readable_time(PM_FILE_DELETE_TIME)
-    msg = await vp.reply(f"⚠️ This file will auto-delete in {time}. Save it somewhere else!")
-    await asyncio.sleep(PM_FILE_DELETE_TIME)
-    await msg.delete()
-    await vp.delete()
-    return await vp.reply(
-        "File deleted! Click below to get it again.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ", callback_data=f"get_del_file#{grp_id}#{file_id}")]])
-    )
-
-# ==========================================================
-# Link Command: Generate Watch/Download Links
-# ==========================================================
-@Client.on_message(filters.command("link"))
-async def link(bot, message):
-    if not message.reply_to_message:
-        return await message.reply("⚠️ Reply to a media file to generate link.")
-
-    try:
-        msg = message.reply_to_message
-        media = getattr(msg, msg.media.value)
-        cached = await bot.send_cached_media(
-            chat_id=BIN_CHANNEL,
-            file_id=media.file_id
-        )
-
-        watch = f"{URL}watch/{cached.id}"
-        download = f"{URL}download/{cached.id}"
-
+        # Buttons without stream
         btn = [
             [
-                InlineKeyboardButton("▶️ Watch Online", url=watch),
-                InlineKeyboardButton("⬇️ Fast Download", url=download)
+                InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
+                InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
             ],
-            [InlineKeyboardButton("❌ Close ❌", callback_data="close_data")]
+            [
+                InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
+            ]
         ]
 
-        await message.reply(
-            "✅ Here is your link:",
-            reply_markup=InlineKeyboardMarkup(btn),
-            disable_web_page_preview=True
+        msg = await client.send_cached_media(
+            chat_id=message.from_user.id,
+            file_id=file["_id"],
+            caption=CAPTION,
+            protect_content=False,
+            reply_markup=InlineKeyboardMarkup(btn)
         )
+        file_ids.append(msg.id)
 
-    except Exception as e:
-        await message.reply(f"❌ Unsupported file\n\n<code>{e}</code>")
+    time = get_readable_time(PM_FILE_DELETE_TIME)
+    vp = await message.reply(f"⚠️ Files will auto-delete in {time}. Save them somewhere else!")
+    await asyncio.sleep(PM_FILE_DELETE_TIME)
+    buttons = [[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇs ᴀɢᴀɪɴ", callback_data=f"get_del_send_all_files#{grp_id}#{key}")]]
+    await client.delete_messages(chat_id=message.chat.id, message_ids=file_ids + [total_files.id])
+    return await vp.edit("Files deleted! Click below to get them again.", reply_markup=InlineKeyboardMarkup(buttons))
+
+
+# Single file
+type_, grp_id, file_id = mc.split("_", 2)
+file = await get_file_details(file_id)
+if not file:
+    return await message.reply("No Such File Exist!")
+
+settings = await get_settings(int(grp_id))
+
+# Shortlink: removed premium restriction
+if type_ != "shortlink" and settings["shortlink"]:
+    link = await get_shortlink(settings["url"], settings["api"], f"https://t.me/{temp.U_NAME}?start=shortlink_{grp_id}_{file_id}")
+    btn = [
+        [InlineKeyboardButton("♻️ Get File ♻️", url=link)],
+        [InlineKeyboardButton("📍 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋ 📍", url=settings["tutorial"])]
+    ]
+    return await message.reply(
+        f"[{get_size(file['file_size'])}] {file['file_name']}\n\nYour file is ready. 👍",
+        reply_markup=InlineKeyboardMarkup(btn),
+        protect_content=True
+    )
+
+CAPTION = settings["caption"].format(
+    file_name=file["file_name"],
+    file_size=get_size(file["file_size"]),
+    file_caption=file["caption"]
+)
+
+# Buttons without stream
+btn = [
+    [
+        InlineKeyboardButton("⚡️ ᴜᴘᴅᴀᴛᴇs", url=UPDATES_LINK),
+        InlineKeyboardButton("💡 ꜱᴜᴘᴘᴏʀᴛ", url=SUPPORT_LINK)
+    ],
+    [
+        InlineKeyboardButton("⁉️ ᴄʟᴏsᴇ ⁉️", callback_data="close_data")
+    ]
+]
+
+vp = await client.send_cached_media(
+    chat_id=message.from_user.id,
+    file_id=file_id,
+    caption=CAPTION,
+    protect_content=False,
+    reply_markup=InlineKeyboardMarkup(btn)
+)
+time = get_readable_time(PM_FILE_DELETE_TIME)
+msg = await vp.reply(f"⚠️ This file will auto-delete in {time}. Save it somewhere else!")
+await asyncio.sleep(PM_FILE_DELETE_TIME)
+await msg.delete()
+await vp.delete()
+return await vp.reply(
+    "File deleted! Click below to get it again.",
+    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ", callback_data=f"get_del_file#{grp_id}#{file_id}")]])
+)
 
 
 # ==========================================================
@@ -468,179 +429,6 @@ async def delete_file(bot, message):
         f"⚠️ Do you want to delete all results for: <b>{query}</b> ?",
         reply_markup=InlineKeyboardMarkup(btn)
     )
-
-
-# ------------------------------
-# /img_2_link command
-# ------------------------------
-@Client.on_message(filters.command('img_2_link'))
-async def img_2_link(bot, message):
-    reply_to_message = message.reply_to_message
-    if not reply_to_message:
-        return await message.reply('⚠️ Reply to a photo to generate a link.')
-    file = reply_to_message.photo
-    if file is None:
-        return await message.reply('❌ Invalid media. Only photos supported.')
-    text = await message.reply_text("⏳ Processing...")
-    path = await reply_to_message.download()
-    response = upload_image(path)
-    if not response:
-        await text.edit_text("❌ Upload failed!")
-        return
-    try:
-        os.remove(path)
-    except:
-        pass
-    await text.edit_text(
-        f"<b>✅ Your link is ready:\n\n{response}</b>",
-        disable_web_page_preview=True
-    )
-
-
-# ------------------------------
-# /ping command
-# ------------------------------
-@Client.on_message(filters.command('ping'))
-async def ping(client, message):
-    start_time = monotonic()
-    msg = await message.reply("👀 Pinging...")
-    end_time = monotonic()
-    await msg.edit(f'🏓 Pong: <b>{round((end_time - start_time) * 1000)} ms</b>')
-
-# ------------------------------
-# /myplan command
-# ------------------------------
-@Client.on_message(filters.command('myplan') & filters.private)
-async def myplan(client, message):
-    if not IS_PREMIUM:
-        return await message.reply('⚠️ Premium feature is disabled by admin.')
-    mp = db.get_plan(message.from_user.id)
-    if not await is_premium(message.from_user.id, client):
-        btn = [
-            [InlineKeyboardButton('⚡ Activate Trial', callback_data='activate_trial')],
-            [InlineKeyboardButton('💎 Activate Plan', callback_data='activate_plan')]
-        ]
-        return await message.reply(
-            '❌ You don’t have any premium plan.\n\nUse /plan to activate.',
-            reply_markup=InlineKeyboardMarkup(btn)
-        )
-    await message.reply(
-        f"✅ You activated <b>{mp['plan']}</b> plan.\n"
-        f"⏳ Expire: <b>{mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}</b>"
-    )
-
-
-# ------------------------------
-# /plan command
-# ------------------------------
-@Client.on_message(filters.command('plan') & filters.private)
-async def plan(client, message):
-    if not IS_PREMIUM:
-        return await message.reply('⚠️ Premium feature is disabled by admin.')
-    btn = [
-        [InlineKeyboardButton('⚡ Activate Trial', callback_data='activate_trial')],
-        [InlineKeyboardButton('💎 Activate Plan', callback_data='activate_plan')]
-    ]
-    await message.reply(
-        script.PLAN_TXT.format(PRE_DAY_AMOUNT, RECEIPT_SEND_USERNAME),
-        reply_markup=InlineKeyboardMarkup(btn)
-    )
-
-
-# ------------------------------
-# /add_prm command (Admin only)
-# ------------------------------
-@Client.on_message(filters.command('add_prm') & filters.user(ADMINS))
-async def add_prm(bot, message):
-    if not IS_PREMIUM:
-        return await message.reply('⚠️ Premium feature is disabled by admin.')
-    try:
-        _, user_id, d = message.text.split(' ')
-    except:
-        return await message.reply('Usage: <code>/add_prm user_id 1d</code>')
-    try:
-        d = int(d[:-1])
-    except:
-        return await message.reply('❌ Not valid days. Use formats like 1d, 7d, 30d, etc.')
-    try:
-        user = await bot.get_users(user_id)
-    except Exception as e:
-        return await message.reply(f'❌ Error: {e}')
-    if user.id in ADMINS:
-        return await message.reply('⚠️ ADMINS already have premium.')
-    if not await is_premium(user.id, bot):
-        mp = db.get_plan(user.id)
-        ex = datetime.now() + timedelta(days=d)
-        mp['expire'] = ex
-        mp['plan'] = f'{d} days'
-        mp['premium'] = True
-        db.update_plan(user.id, mp)
-        await message.reply(
-            f"✅ Given premium to {user.mention}\n"
-            f"⏳ Expire: {ex.strftime('%Y.%m.%d %H:%M:%S')}"
-        )
-        try:
-            await bot.send_message(
-                user.id,
-                f"🎉 You are now a premium user!\n"
-                f"⏳ Expire: {ex.strftime('%Y.%m.%d %H:%M:%S')}"
-            )
-        except:
-            pass
-    else:
-        await message.reply(f"{user.mention} is already a premium user.")
-
-
-# ------------------------------
-# /rm_prm command (Admin only)
-# ------------------------------
-@Client.on_message(filters.command('rm_prm') & filters.user(ADMINS))
-async def rm_prm(bot, message):
-    if not IS_PREMIUM:
-        return await message.reply('⚠️ Premium feature is disabled by admin.')
-    try:
-        _, user_id = message.text.split(' ')
-    except:
-        return await message.reply('Usage: <code>/rm_prm user_id</code>')
-    try:
-        user = await bot.get_users(user_id)
-    except Exception as e:
-        return await message.reply(f'❌ Error: {e}')
-    if user.id in ADMINS:
-        return await message.reply('⚠️ ADMINS already have premium.')
-    if not await is_premium(user.id, bot):
-        await message.reply(f"{user.mention} is not a premium user.")
-    else:
-        mp = db.get_plan(user.id)
-        mp['expire'] = ''
-        mp['plan'] = ''
-        mp['premium'] = False
-        db.update_plan(user.id, mp)
-        await message.reply(f"✅ {user.mention} is no longer a premium user.")
-        try:
-            await bot.send_message(user.id, "⚠️ Your premium plan was removed by admin.")
-        except:
-            pass
-
-
-# ------------------------------
-# /prm_list command (Admin only)
-# ------------------------------
-@Client.on_message(filters.command('prm_list') & filters.user(ADMINS))
-async def prm_list(bot, message):
-    if not IS_PREMIUM:
-        return await message.reply('⚠️ Premium feature is disabled by admin.')
-    tx = await message.reply('⏳ Getting list of premium users...')
-    pr = [i['id'] for i in db.get_premium_users() if i['status']['premium']]
-    t = '📋 <b>Premium users in database:</b>\n\n'
-    for p in pr:
-        try:
-            u = await bot.get_users(p)
-            t += f"👤 {u.mention} : <code>{p}</code>\n"
-        except:
-            t += f"👤 <code>{p}</code>\n"
-    await tx.edit_text(t)
-
 
 # ------------------------------
 # /set_fsub command (Admin only)
