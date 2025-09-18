@@ -12,10 +12,8 @@ import time
 import asyncio
 import uvloop
 from hydrogram import types, Client
-from aiohttp import web
 from typing import Union, AsyncGenerator
 
-from web import web_app
 from info import (
     LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT
 )
