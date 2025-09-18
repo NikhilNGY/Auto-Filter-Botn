@@ -1,6 +1,5 @@
 import secrets
 import mimetypes
-from info import BIN_CHANNEL
 from utils import temp
 from aiohttp import web
 from web.utils.render_template import media_watch
