@@ -43,7 +43,7 @@ async def pm_search(client: Client, message):
         await auto_filter(client, message, s)
 
     else:
-        # Non-premium users: show limited search
+        # Non-premium users: show as premium users limit search
         files, n_offset, total = await get_search_results(message.text)
 
         btn = [
