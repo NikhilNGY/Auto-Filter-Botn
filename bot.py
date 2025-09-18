@@ -1,4 +1,18 @@
 import logging
+import os
+import time
+import asyncio
+import uvloop
+from hydrogram import types, Client
+from typing import Union, AsyncGenerator
+from info import LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT, ADMINS
+from utils import temp
+from database.users_chats_db import db
+from web import web_app
+
+uvloop.install()
+
+# ---------------- LOGGING ---------------- #
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -6,21 +20,6 @@ logging.basicConfig(
 )
 logging.getLogger('hydrogram').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-
-import os
-import time
-import asyncio
-import uvloop
-from hydrogram import types, Client
-from typing import Union, AsyncGenerator
-
-from info import (
-    LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT
-)
-from utils import temp
-from database.users_chats_db import db
-
-uvloop.install()
 
 
 class Bot(Client):
@@ -37,7 +36,7 @@ class Bot(Client):
         await super().start()
         temp.START_TIME = time.time()
 
-        # Load banned users and chats if any
+        # Load banned users/chats
         temp.BANNED_USERS, temp.BANNED_CHATS = await db.get_banned()
 
         # Handle restart notification
@@ -71,7 +70,14 @@ class Bot(Client):
             logger.error("Bot must be admin in LOG_CHANNEL. Exiting now.")
             exit()
 
-        logger.info(f"@{me.username} is started now ✓")
+        # ---------------- STARTUP INFO ---------------- #
+        logger.info(f"Bot Started ✓")
+        logger.info(f"Username: @{me.username}")
+        logger.info(f"Bot ID: {temp.ME}")
+        logger.info(f"Admins: {ADMINS}")
+        logger.info(f"Log Channel: {LOG_CHANNEL}")
+        logger.info(f"Port: {PORT}")
+        logger.info("Waiting for messages...")
 
     async def stop(self, *args, **kwargs):
         await super().stop()
@@ -95,6 +101,17 @@ class Bot(Client):
                 current += 1
 
 
+# ---------------- RUN FOREVER ---------------- #
 if __name__ == "__main__":
-    app = Bot()
-    app.run()
+    while True:
+        try:
+            app = Bot()
+            app.run()
+        except Exception as e:
+            if hasattr(e, "value"):  # Catch FloodWait
+                wait_time = getattr(e, "value", 0)
+                logger.warning(f"FloodWait detected. Sleeping for {wait_time} seconds...")
+                time.sleep(wait_time + 2)
+            else:
+                logger.error(f"Unexpected error: {e}. Retrying in 30 seconds...")
+                time.sleep(30)
