@@ -1,7 +1,7 @@
 from hydrogram.errors import UserNotParticipant, FloodWait
 from hydrogram import enums
 from hydrogram.types import InlineKeyboardButton
-from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE
+from info import LONG_IMDB_DESCRIPTION, ADMINS, TIME_ZONE
 from imdb import Cinemagoer
 from database.users_chats_db import db
 from shortzy import Shortzy
