@@ -47,7 +47,7 @@ def get_int_env(name: str, default: int) -> int:
 
 
 # ---------------- BOT INFO ---------------- #
-API_ID = get_int_env("API_ID")
+API_ID = get_int_env("API_ID" 2468192)
 API_HASH = get_required_env("API_HASH")
 BOT_TOKEN = get_required_env("BOT_TOKEN")
 
