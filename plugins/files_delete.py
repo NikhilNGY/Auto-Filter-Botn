@@ -1,6 +1,6 @@
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from settings import DELETE_CHANNELS, ADMINS
+from hydrogram import Client, filters
+from hydrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from info import DELETE_CHANNELS, ADMINS   # use info.py instead of settings
 from database.db import delete_files_by_name
 
 # Handle /delete command
@@ -11,7 +11,7 @@ async def delete_files(client, message):
 
     try:
         query = message.text.split(" ", 1)[1]
-    except:
+    except IndexError:
         return await message.reply_text("⚠️ Usage: /delete <query>")
 
     if message.chat.id not in DELETE_CHANNELS:
