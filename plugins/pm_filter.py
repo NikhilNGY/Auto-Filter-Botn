@@ -285,12 +285,16 @@ async def advantage_spoll_choker(bot, query):
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
+    user_id = query.from_user.id
+    reply_user_id = None
+    try:
+        reply_user_id = query.message.reply_to_message.from_user.id
+    except:
+        reply_user_id = user_id
+
+    # --- CLOSE BUTTON ---
     if query.data == "close_data":
-        try:
-            user = query.message.reply_to_message.from_user.id
-        except:
-            user = query.from_user.id
-        if int(user) != 0 and query.from_user.id != int(user):
+        if reply_user_id != 0 and user_id != reply_user_id:
             return await query.answer(f"Hello {query.from_user.first_name},\nThis Is Not For You!", show_alert=True)
         await query.answer("Closed!")
         await query.message.delete()
@@ -298,73 +302,54 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.reply_to_message.delete()
         except:
             pass
-  
-    if query.data.startswith("file"):
+
+    # --- FILE BUTTON ---
+    elif query.data.startswith("file"):
         ident, file_id = query.data.split("#")
-        try:
-            user = query.message.reply_to_message.from_user.id
-        except:
-            user = query.message.from_user.id
-        if int(user) != 0 and query.from_user.id != int(user):
+        if reply_user_id != 0 and user_id != reply_user_id:
             return await query.answer(f"Hello {query.from_user.first_name},\nDon't Click Other Results!", show_alert=True)
         await query.answer(url=f"https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file_id}")
 
-    elif query.data.startswith("get_del_file"):
-        ident, group_id, file_id = query.data.split("#")
-        if not await is_premium(query.from_user.id, client):
-            return await query.answer(f"Only for premium users, use /plan for details", show_alert=True)
-        await query.answer(url=f"https://t.me/{temp.U_NAME}?start=file_{group_id}_{file_id}")
-        await query.message.delete()
-
-    elif query.data.startswith("get_del_send_all_files"):
-        ident, group_id, key = query.data.split("#")
-        if not await is_premium(query.from_user.id, client):
-            return await query.answer(f"Only for premium users, use /plan for details", show_alert=True)
-        await query.answer(url=f"https://t.me/{temp.U_NAME}?start=all_{group_id}_{key}")
-        await query.message.delete()
-        
-            
+    # --- CHECK SUBSCRIPTION ---
     elif query.data.startswith("checksub"):
         ident, mc = query.data.split("#")
-        settings = await get_settings(int(mc.split("_", 2)[1]))
         btn = await is_subscribed(client, query)
         if btn:
             await query.answer(f"Hello {query.from_user.first_name},\nPlease join my updates channel and try again.", show_alert=True)
-            btn.append(
-                [InlineKeyboardButton("🔁 Try Again 🔁", callback_data=f"checksub#{mc}")]
-            )
+            btn.append([InlineKeyboardButton("🔁 Try Again 🔁", callback_data=f"checksub#{mc}")])
             await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
             return
         await query.answer(url=f"https://t.me/{temp.U_NAME}?start={mc}")
         await query.message.delete()
 
+    # --- INFORMATION BUTTONS ---
     elif query.data == "buttons":
         await query.answer()
 
     elif query.data == "instructions":
-        await query.answer("Movie request format.\nExample:\nBlack Adam or Black Adam 2022\n\nTV Reries request format.\nExample:\nLoki S01E01 or Loki S01 E01\n\nDon't use symbols.", show_alert=True)
-    
+        await query.answer(
+            "Movie request format:\nExample: Black Adam or Black Adam 2022\n\n"
+            "TV Series request format:\nExample: Loki S01E01 or Loki S01 E01\n\nDon't use symbols.",
+            show_alert=True
+        )
+
+    # --- START BUTTON ---
     elif query.data == "start":
-        buttons = [[
-            InlineKeyboardButton("+ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ +", url=f'http://t.me/{temp.U_NAME}?startgroup=start')
-        ],[
-            InlineKeyboardButton('ℹ️ ᴜᴘᴅᴀᴛᴇs', url=UPDATES_LINK),
-            InlineKeyboardButton('🧑‍💻 ꜱᴜᴘᴘᴏʀᴛ', url=SUPPORT_LINK)
-        ],[
-            InlineKeyboardButton('👨‍🚒 ʜᴇʟᴘ', callback_data='help'),
-            InlineKeyboardButton('🔎 ɪɴʟɪɴᴇ', switch_inline_query_current_chat=''),
-            InlineKeyboardButton('📚 ᴀʙᴏᴜᴛ', callback_data='about')
-        ],[
-            InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")
-        ]]
+        buttons = [
+            [InlineKeyboardButton("+ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ +", url=f'http://t.me/{temp.U_NAME}?startgroup=start')],
+            [InlineKeyboardButton('ℹ️ ᴜᴘᴅᴀᴛᴇs', url=UPDATES_LINK), InlineKeyboardButton('🧑‍💻 ꜱᴜᴘᴘᴏʀᴛ', url=SUPPORT_LINK)],
+            [InlineKeyboardButton('👨‍🚒 ʜᴇʟᴘ', callback_data='help'), InlineKeyboardButton('🔎 ɪɴʟɪɴᴇ', switch_inline_query_current_chat=''), InlineKeyboardButton('📚 ᴀʙᴏᴜᴛ', callback_data='about')],
+            [InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")]
+        ]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.START_TXT.format(query.from_user.mention, get_wish())),
+            InputMediaPhoto(random.choice(temp.PICS), caption=script.START_TXT.format(query.from_user.mention, get_wish())),
             reply_markup=reply_markup
         )
 
+    # --- STATS BUTTON ---
     elif query.data == "stats":
-        if query.from_user.id not in ADMINS:
+        if user_id not in ADMINS:
             return await query.answer("ADMINS Only!", show_alert=True)
         files = db_count_documents()
         users = await db.total_users_count()
@@ -372,316 +357,77 @@ async def cb_handler(client: Client, query: CallbackQuery):
         prm = db.get_premium_count()
         used_files_db_size = get_size(await db.get_files_db_size())
         used_data_db_size = get_size(await db.get_data_db_size())
-
         if SECOND_FILES_DATABASE_URL:
             secnd_files_db_used_size = get_size(await db.get_second_files_db_size())
             secnd_files = second_db_count_documents()
         else:
             secnd_files_db_used_size = '-'
             secnd_files = '-'
-        uptime = get_readable_time(time_now() - temp.START_TIME)
-        buttons = [[
-            InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='about')
-        ]]
+        uptime = get_readable_time(time_now() - START_TIME)
+        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='about')]]
         await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.STATUS_TXT.format(users, prm, chats, used_data_db_size, files, used_files_db_size, secnd_files, secnd_files_db_used_size, uptime)),
+            InputMediaPhoto(random.choice(temp.PICS), caption=script.STATUS_TXT.format(
+                users, prm, chats, used_data_db_size, files, used_files_db_size, secnd_files, secnd_files_db_used_size, uptime
+            )),
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
+    # --- USER & ADMIN COMMANDS ---
     elif query.data == "user_command":
-        buttons = [[
-            InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='help')
-        ]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.USER_COMMAND_TXT),
-            reply_markup=reply_markup
-        )
-        
+        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='help')]]
+        await query.edit_message_media(InputMediaPhoto(random.choice(temp.PICS), caption=script.USER_COMMAND_TXT), reply_markup=InlineKeyboardMarkup(buttons))
+
     elif query.data == "admin_command":
-        if query.from_user.id not in ADMINS:
+        if user_id not in ADMINS:
             return await query.answer("ADMINS Only!", show_alert=True)
-        buttons = [[
-            InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='help')
-        ]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.ADMIN_COMMAND_TXT),
-            reply_markup=reply_markup
-        )
-  
+        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='help')]]
+        await query.edit_message_media(InputMediaPhoto(random.choice(temp.PICS), caption=script.ADMIN_COMMAND_TXT), reply_markup=InlineKeyboardMarkup(buttons))
+
+    # --- GROUP SETTINGS ---
     elif query.data.startswith("bool_setgs"):
         ident, set_type, status, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            await query.answer("You not admin in this group.", show_alert=True)
-            return
-
-        if status == "True":
-            await save_group_settings(int(grp_id), set_type, False)
-        else:
-            await save_group_settings(int(grp_id), set_type, True)
-
+        if not await is_check_admin(client, int(grp_id), user_id):
+            return await query.answer("You not admin in this group.", show_alert=True)
+        await save_group_settings(int(grp_id), set_type, status != "True")
         btn = await get_grp_stg(int(grp_id))
         await query.message.edit_reply_markup(InlineKeyboardMarkup(btn))
-            
-    elif query.data.startswith("imdb_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        settings = await get_settings(int(grp_id))
-        btn = [[
-            InlineKeyboardButton('Set IMDb template', callback_data=f'set_imdb#{grp_id}')
-        ],[
-            InlineKeyboardButton('Default IMDb template', callback_data=f'default_imdb#{grp_id}')
-        ],[
-            InlineKeyboardButton('Back', callback_data=f'back_setgs#{grp_id}')
-        ]]
-        await query.message.edit(f'Select you want option\n\nCurrent template:\n{settings["template"]}', reply_markup=InlineKeyboardMarkup(btn))
 
-    elif query.data.startswith("set_imdb"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send imdb template with formats')
-        msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'template', msg.text)
-        await m.delete()
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'imdb_setgs#{grp_id}')
-        ]]
-        await query.message.reply('Successfully changed template', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("default_imdb"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        await save_group_settings(int(grp_id), 'template', script.IMDB_TEMPLATE)
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'imdb_setgs#{grp_id}')
-        ]]
-        await query.message.edit('Successfully changed template to default', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("welcome_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        settings = await get_settings(int(grp_id))
-        btn = [[
-            InlineKeyboardButton('Set Welcome', callback_data=f'set_welcome#{grp_id}')
-        ],[
-            InlineKeyboardButton('Default Welcome', callback_data=f'default_welcome#{grp_id}')
-        ],[
-            InlineKeyboardButton('Back', callback_data=f'back_setgs#{grp_id}')
-        ]]
-        await query.message.edit(f'Select you want option\n\nCurrent welcome:\n{settings["welcome_text"]}', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("set_welcome"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send Welcome with formats')
-        msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'welcome_text', msg.text)
-        await m.delete()
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'welcome_setgs#{grp_id}')
-        ]]
-        await query.message.reply('Successfully changed Welcome', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("default_welcome"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        await save_group_settings(int(grp_id), 'welcome_text', script.WELCOME_TEXT)
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'welcome_setgs#{grp_id}')
-        ]]
-        await query.message.edit('Successfully changed Welcome to default', reply_markup=InlineKeyboardMarkup(btn))
-
-    
-    elif query.data.startswith("tutorial_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        settings = await get_settings(int(grp_id))
-        btn = [[
-            InlineKeyboardButton('Set tutorial link', callback_data=f'set_tutorial#{grp_id}')
-        ],[
-            InlineKeyboardButton('Default tutorial link', callback_data=f'default_tutorial#{grp_id}')
-        ],[
-            InlineKeyboardButton('Back', callback_data=f'back_setgs#{grp_id}')
-        ]]
-        await query.message.edit(f'Select you want option\n\nCurrent tutorial link:\n{settings["tutorial"]}', reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True)
-        
-    elif query.data.startswith("set_tutorial"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send tutorial link')
-        msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'tutorial', msg.text)
-        await m.delete()
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'tutorial_setgs#{grp_id}')
-        ]]
-        await query.message.reply('Successfully changed tutorial link', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("default_tutorial"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        await save_group_settings(int(grp_id), 'tutorial', TUTORIAL)
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'tutorial_setgs#{grp_id}')
-        ]]
-        await query.message.edit('Successfully changed tutorial link to default', reply_markup=InlineKeyboardMarkup(btn))
-
-    
-    elif query.data.startswith("shortlink_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        settings = await get_settings(int(grp_id))
-        btn = [[
-            InlineKeyboardButton('Set shortlink', callback_data=f'set_shortlink#{grp_id}')
-        ],[
-            InlineKeyboardButton('Default shortlink', callback_data=f'default_shortlink#{grp_id}')
-        ],[
-            InlineKeyboardButton('Back', callback_data=f'back_setgs#{grp_id}')
-        ]]
-        await query.message.edit(f'Select you want option\n\nCurrent shortlink:\n{settings["url"]} - {settings["api"]}', reply_markup=InlineKeyboardMarkup(btn))
-        
-    elif query.data.startswith("set_shortlink"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send shortlink url')
-        url_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await m.delete()
-        k = await query.message.reply('Send shortlink api key')
-        key_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'url', url_msg.text)
-        await save_group_settings(int(grp_id), 'api', key_msg.text)
-        await k.delete()
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'shortlink_setgs#{grp_id}')
-        ]]
-        await query.message.reply('Successfully changed shortlink', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("default_shortlink"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        await save_group_settings(int(grp_id), 'url', SHORTLINK_URL)
-        await save_group_settings(int(grp_id), 'api', SHORTLINK_API)
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'shortlink_setgs#{grp_id}')
-        ]]
-        await query.message.edit('Successfully changed shortlink to default', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("caption_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        settings = await get_settings(int(grp_id))
-        btn = [[
-            InlineKeyboardButton('Set caption', callback_data=f'set_caption#{grp_id}')
-        ],[
-            InlineKeyboardButton('Default caption', callback_data=f'default_caption#{grp_id}')
-        ],[
-            InlineKeyboardButton('Back', callback_data=f'back_setgs#{grp_id}')
-        ]]
-        await query.message.edit(f'Select you want option\n\nCurrent caption:\n{settings["caption"]}', reply_markup=InlineKeyboardMarkup(btn))
-        
-        
-    elif query.data.startswith("set_caption"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send caption with formats')
-        msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'caption', msg.text)
-        await m.delete()
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'caption_setgs#{grp_id}')
-        ]]
-        await query.message.reply('Successfully changed caption', reply_markup=InlineKeyboardMarkup(btn))
-
-
-    elif query.data.startswith("default_caption"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        await save_group_settings(int(grp_id), 'caption', script.FILE_CAPTION)
-        btn = [[
-            InlineKeyboardButton('Back', callback_data=f'caption_setgs#{grp_id}')
-        ]]
-        await query.message.edit('Successfully changed caption to default', reply_markup=InlineKeyboardMarkup(btn))
-
-    elif query.data.startswith("back_setgs"):
-        _, grp_id = query.data.split("#")
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, int(grp_id), userid):
-            return await query.answer("You not admin in this group.", show_alert=True)
-        btn = await get_grp_stg(int(grp_id))
-        chat = await client.get_chat(int(grp_id))
-        await query.message.edit(text=f"Change your settings for <b>'{chat.title}'</b> as your wish. ⚙", reply_markup=InlineKeyboardMarkup(btn))
-
+    # --- OPEN SETTINGS ---
     elif query.data == "open_group_settings":
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, query.message.chat.id, userid):
+        if not await is_check_admin(client, query.message.chat.id, user_id):
             return await query.answer("You not admin in this group.", show_alert=True)
         btn = await get_grp_stg(query.message.chat.id)
         await query.message.edit(text=f"Change your settings for <b>'{query.message.chat.title}'</b> as your wish. ⚙", reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data == "open_pm_settings":
-        userid = query.from_user.id if query.from_user else None
-        if not await is_check_admin(client, query.message.chat.id, userid):
+        if not await is_check_admin(client, query.message.chat.id, user_id):
             return await query.answer("You not admin in this group.", show_alert=True)
         btn = await get_grp_stg(query.message.chat.id)
         try:
-            await client.send_message(query.from_user.id, f"Change your settings for <b>'{query.message.chat.title}'</b> as your wish. ⚙", reply_markup=InlineKeyboardMarkup(btn))
+            await client.send_message(user_id, f"Change your settings for <b>'{query.message.chat.title}'</b> as your wish. ⚙", reply_markup=InlineKeyboardMarkup(btn))
         except:
             await query.answer(url=f"https://t.me/{temp.U_NAME}?start=settings_{query.message.chat.id}")
-        btn = [[
-            InlineKeyboardButton('Go To PM', url=f"https://t.me/{temp.U_NAME}")
-        ]]
-        await query.message.edit("Settings menu has been sent to PM", reply_markup=InlineKeyboardMarkup(btn))
+        await query.message.edit("Settings menu has been sent to PM", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('Go To PM', url=f"https://t.me/{temp.U_NAME}")]]))
 
+    # --- DELETE FILES ---
     elif query.data.startswith("delete"):
         _, query_ = query.data.split("_", 1)
         await query.message.edit('Deleting...')
         deleted = await delete_files(query_)
         await query.message.edit(f'Deleted {deleted} files in your database in your query {query_}')
-     
+
+    # --- KICK DELETED ACCOUNTS ---
     elif query.data == "kick_deleted_accounts_members":
-        if not await is_check_admin(client, query.message.chat.id, query.from_user.id):
-            await query.answer("This Is Not For You!", show_alert=True)
-            return
+        if not await is_check_admin(client, query.message.chat.id, user_id):
+            return await query.answer("This Is Not For You!", show_alert=True)
         users_id = []
-        await query.message.edit("Kick deleted accounts started! This process maybe get some time...")
+        await query.message.edit("Kick deleted accounts started! This process may take some time...")
         try:
             async for member in client.get_chat_members(query.message.chat.id):
                 if member.user.is_deleted:
                     users_id.append(member.user.id)
-            for user_id in users_id:
-                await client.ban_chat_member(query.message.chat.id, user_id, datetime.now() + timedelta(seconds=30))
+            for uid in users_id:
+                await client.ban_chat_member(query.message.chat.id, uid, datetime.now() + timedelta(seconds=30))
         except Exception as e:
             await query.message.delete()
             await query.message.reply(f'Something went wrong.\n\n<code>{e}</code>')
