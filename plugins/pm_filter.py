@@ -7,10 +7,10 @@ from hydrogram.errors import ListenerTimeout
 from hydrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from Script import script
 from datetime import datetime, timedelta
-from info import IS_PREMIUM, PICS, TUTORIAL, SHORTLINK_API, SHORTLINK_URL, RECEIPT_SEND_USERNAME, UPI_ID, UPI_NAME, PRE_DAY_AMOUNT, SECOND_FILES_DATABASE_URL, ADMINS, URL, MAX_BTN, BIN_CHANNEL, IS_STREAM, DELETE_TIME, FILMS_LINK, LOG_CHANNEL, SUPPORT_GROUP, SUPPORT_LINK, UPDATES_LINK, LANGUAGES, QUALITY
+from info import PICS, TUTORIAL, SHORTLINK_API, SHORTLINK_URL, SECOND_FILES_DATABASE_URL, ADMINS, URL, MAX_BTN, DELETE_TIME, FILMS_LINK, LOG_CHANNEL, SUPPORT_GROUP, SUPPORT_LINK, UPDATES_LINK
 from hydrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
 from hydrogram import Client, filters, enums
-from utils import is_premium, get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
+from utils import get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
 from database.users_chats_db import db
 from database.ia_filterdb import get_search_results,delete_files, db_count_documents, second_db_count_documents
 from plugins.commands import get_grp_stg
@@ -44,13 +44,13 @@ async def pm_search(client: Client, message):
 
         btn = [
             [InlineKeyboardButton("🗂 ᴄʟɪᴄᴋ ʜᴇʀᴇ 🗂", url=FILMS_LINK)],
-            [InlineKeyboardButton("🤑 Buy Premium", url=f"https://t.me/{temp.U_NAME}?start=premium")]
+            [InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
         ]
         reply_markup = InlineKeyboardMarkup(btn)
 
         if int(total) > 0:
             await message.reply_text(
-                f'<b><i>🤗 Total <code>{total}</code> results found in this group 👇</i></b>\n\nor buy premium subscription',
+                f'<b><i>🤗 Total <code>{total}</code> results found in this group 👇</i></b>',
                 reply_markup=reply_markup
             )
 
@@ -196,13 +196,13 @@ async def next_page(bot: Client, query: CallbackQuery):
         # Send All button
         if settings.get('shortlink') and not await is_premium(user_id, bot):
             send_all_btn = [
-                InlineKeyboardButton(
-                    "♻️ Send All ♻️",
-                    url=f"https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}"
+                InlineKeyboardButton("•  Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ  •", url=f"https://t.me/sandalwood_kannada_moviesz")
+                ]
                 )
             ]
         else:
-            send_all_btn = [InlineKeyboardButton("♻️ Send All", callback_data=f"send_all#{key}#{req}")]
+            send_all_btn = [InlineKeyboardButton("•  Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ  •", url=f"https://t.me/sandalwood_kannada_moviesz")
+                ]
 
         # Pagination
         off_set = 0 if 0 < offset <= MAX_BTN else None if offset == 0 else offset - MAX_BTN
@@ -229,7 +229,7 @@ async def next_page(bot: Client, query: CallbackQuery):
 
         # Build final buttons
         btn.insert(0, send_all_btn)
-        btn.append([InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")])
+        btn.append([InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
         btn.append(page_btn)
 
         await query.message.edit_text(
@@ -269,7 +269,7 @@ async def advantage_spoll_choker(bot, query):
     else:
         # No results found
         no_result_msg = await query.message.edit_text(
-            f"👋 Hello {query.from_user.mention},\n\nI couldn't find <b>'{search_title}'</b> in my database. 😔"
+            f"""<b>⚠️ Dᴏɴ'ᴛ Aꜱᴋ Lɪᴋᴇ Tʜɪꜱ. Aꜱᴋ Oɴʟʏ Mᴏᴠɪᴇ Nᴀᴍᴇ Wɪᴛʜ Yᴇᴀʀ. (Cʜᴇᴄᴋ Cᴏʀʀᴇᴄᴛ Sᴘᴇʟʟɪɴɢ Sᴀᴍᴇ Aꜱ Iɴ Gᴏᴏɢʟᴇ) Dᴏɴ'ᴛ Aᴅᴅ Aɴʏ Wᴏʀᴅꜱ Wʜɪʟᴇ RᴇQᴜᴇꜱᴛɪɴɢ. Oᴛʜᴇʀᴡɪꜱᴇ Yᴏᴜ Dᴏɴ'ᴛ Gᴇᴛ Tʜᴇ Mᴏᴠɪᴇ Cᴏʀʀᴇᴄᴛʟʏ🚫⚠️\n \nAᴅᴅ Mᴏᴠɪᴇ Nᴀᴍᴇ: \nEg:\n777 ᴄʜᴀʀʟɪᴇ ✅\n777 ᴄʜᴀʀʟɪᴇ 2022 ✅\n777 ᴄʜᴀʀʟɪᴇ ᴋᴀɴɴᴀᴅᴀ ✅\n777ᴄʜᴀʀʟɪᴇ ❌ \n777 ᴄʜᴀʀʟɪᴇ ᴍᴏᴠɪᴇ ❌\n777 ᴄʜᴀʀʟɪᴇ ʟɪɴᴋ ❌ ᴇᴛᴄ.</b>"""
         )
         # Log no result
         await bot.send_message(LOG_CHANNEL, f"#No_Result\n\nRequester: {query.from_user.mention}\nContent: {search_title}")
@@ -326,21 +326,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "buttons":
         await query.answer()
 
-    elif query.data == "instructions":
-        await query.answer(
-            "Movie request format:\nExample: Black Adam or Black Adam 2022\n\n"
-            "TV Series request format:\nExample: Loki S01E01 or Loki S01 E01\n\nDon't use symbols.",
-            show_alert=True
-        )
-
     # --- START BUTTON ---
     elif query.data == "start":
         buttons = [
-            [InlineKeyboardButton("+ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ +", url=f'http://t.me/{temp.U_NAME}?startgroup=start')],
-            [InlineKeyboardButton('ℹ️ ᴜᴘᴅᴀᴛᴇs', url=UPDATES_LINK), InlineKeyboardButton('🧑‍💻 ꜱᴜᴘᴘᴏʀᴛ', url=SUPPORT_LINK)],
-            [InlineKeyboardButton('👨‍🚒 ʜᴇʟᴘ', callback_data='help'), InlineKeyboardButton('🔎 ɪɴʟɪɴᴇ', switch_inline_query_current_chat=''), InlineKeyboardButton('📚 ᴀʙᴏᴜᴛ', callback_data='about')],
-            [InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")]
-        ]
+            [InlineKeyboardButton('🎬   Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ   🎬', url=f'https://t.me/+pCz5eoun5Zk5YzRl')
+                ],[
+                    InlineKeyboardButton('🎞 Mᴀɪɴ Gʀᴏᴜᴘ ', url=f"https://t.me/Sandalwood_Kannada_Group"),
+                    InlineKeyboardButton('🆕 Mᴀɪɴ Cʜᴀɴɴᴇʟ ', url="https://t.me/KR_PICTURE")
+                ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.edit_message_media(
             InputMediaPhoto(random.choice(temp.PICS), caption=script.START_TXT.format(query.from_user.mention, get_wish())),
@@ -364,7 +357,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             secnd_files_db_used_size = '-'
             secnd_files = '-'
         uptime = get_readable_time(time_now() - START_TIME)
-        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='about')]]
+        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='start')]]
         await query.edit_message_media(
             InputMediaPhoto(random.choice(temp.PICS), caption=script.STATUS_TXT.format(
                 users, prm, chats, used_data_db_size, files, used_files_db_size, secnd_files, secnd_files_db_used_size, uptime
@@ -439,25 +432,18 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.reply('Nothing to kick deleted accounts.')
 
 async def auto_filter(client, msg, s, spoll=False):
-    """
-    Auto filter function for handling search results, IMDB integration, 
-    pagination buttons, and premium/shortlink features.
-    """
-
-    # Case: direct message search
     if not spoll:
         message = msg
         settings = await get_settings(message.chat.id)
         search = re.sub(r"\s+", " ", re.sub(r"[-:\"';!]", " ", message.text)).strip()
-
         files, offset, total_results = await get_search_results(search)
+
         if not files:
             if settings.get("spell_check"):
                 return await advantage_spell_chok(message, s)
             return await s.edit(f"I couldn't find <b>{search}</b>")
-
-    # Case: callback search (spoll = tuple passed from query handler)
     else:
+        # Callback search
         settings = await get_settings(msg.message.chat.id)
         message = msg.message.reply_to_message
         search, files, offset, total_results = spoll
@@ -465,11 +451,11 @@ async def auto_filter(client, msg, s, spoll=False):
     req = message.from_user.id if message and message.from_user else 0
     key = f"{message.chat.id}-{message.id}"
 
-    # Store results in temp cache
+    # Store results in temporary cache
     temp.FILES[key] = files
     temp.BUTTONS[key] = search
 
-    # Files links text
+    # Build file links text
     files_link = ""
     if settings.get("links"):
         for i, file in enumerate(files, start=1):
@@ -490,48 +476,16 @@ async def auto_filter(client, msg, s, spoll=False):
             )
         ] for file in files]
 
-    # Pagination & send-all buttons
+    # Pagination buttons (simplified)
     if offset != "":
-        # With shortlink and non-premium
-        if settings.get("shortlink") and not await is_premium(message.from_user.id, client):
-            btn.insert(0, [
-                InlineKeyboardButton("📰 Languages", callback_data=f"languages#{key}#{req}#{offset}"),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")
-            ])
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(
-                    settings["url"], settings["api"],
-                    f"https://t.me/{temp.U_NAME}?start=all_{message.chat.id}_{key}"
-                ))
-            ])
-        else:
-            btn.insert(0, [
-                InlineKeyboardButton("📰 Languages", callback_data=f"languages#{key}#{req}#{offset}"),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")
-            ])
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All", callback_data=f"send_all#{key}#{req}")
-            ])
         btn.append([
             InlineKeyboardButton(f"1/{math.ceil(int(total_results) / MAX_BTN)}", callback_data="buttons"),
             InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{offset}")
         ])
-    else:
-        if settings.get("shortlink") and not await is_premium(message.from_user.id, client):
-            btn.insert(0, [
-                InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(
-                    settings["url"], settings["api"],
-                    f"https://t.me/{temp.U_NAME}?start=all_{message.chat.id}_{key}"
-                ))
-            ])
-        else:
-            btn.insert(0, [
-                InlineKeyboardButton("♻️ Send All ♻️", callback_data=f"send_all#{key}#{req}")
-            ])
 
-    # Premium button always at end
+    # Join Kannada Channel button
     btn.append([
-        InlineKeyboardButton("🤑 Buy Premium", url=f"https://t.me/{temp.U_NAME}?start=premium")
+        InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
     ])
 
     # IMDB integration
@@ -548,29 +502,19 @@ async def auto_filter(client, msg, s, spoll=False):
 
     temp.CAP[key] = cap
 
-    # Auto-delete message setup
+    # Auto-delete text
     del_msg = (
         f"\n\n<b>⚠️ This message will auto-delete after "
         f"<code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues.</b>"
         if settings.get("auto_delete") else ""
     )
 
-    # Final message sending
+    # Send final message
     if imdb and imdb.get("poster"):
         await s.delete()
         try:
             k = await message.reply_photo(
                 photo=imdb["poster"],
-                caption=cap[:1024] + files_link + del_msg,
-                reply_markup=InlineKeyboardMarkup(btn),
-                parse_mode=enums.ParseMode.HTML,
-                quote=True
-            )
-        except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
-            # fallback poster
-            poster = imdb["poster"].replace(".jpg", "._V1_UX360.jpg")
-            k = await message.reply_photo(
-                photo=poster,
                 caption=cap[:1024] + files_link + del_msg,
                 reply_markup=InlineKeyboardMarkup(btn),
                 parse_mode=enums.ParseMode.HTML,
@@ -592,7 +536,7 @@ async def auto_filter(client, msg, s, spoll=False):
             parse_mode=enums.ParseMode.HTML
         )
 
-    # Auto-delete logic
+    # Auto-delete
     if settings.get("auto_delete"):
         await asyncio.sleep(DELETE_TIME)
         await k.delete()
@@ -601,34 +545,25 @@ async def auto_filter(client, msg, s, spoll=False):
         except:
             pass
 
-import asyncio
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from utils import temp, get_poster
-from config import LOG_CHANNEL
-import script  # assuming you have `script.NOT_FILE_TXT` defined
-
 
 async def advantage_spell_chok(message, s):
     """
-    Offer spelling correction / alternative movie suggestions when no results are found.
+    Spelling correction / alternative suggestions when no results are found.
     """
     search = message.text.strip()
     google_search = search.replace(" ", "+")
     user_mention = message.from_user.mention if message.from_user else "Anonymous"
     user_id = message.from_user.id if message.from_user else 0
 
-    # Base buttons (instructions + Google search)
     base_btn = [
         [
-            InlineKeyboardButton("⚠️ Instructions ⚠️", callback_data="instructions"),
-            InlineKeyboardButton("🔎 Search Google 🔍", url=f"https://www.google.com/search?q={google_search}")
+            InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
         ]
     ]
 
     try:
         movies = await get_poster(search, bulk=True)
     except Exception:
-        # API error or unexpected failure
         n = await s.edit_text(
             text=script.NOT_FILE_TXT.format(user_mention, search),
             reply_markup=InlineKeyboardMarkup(base_btn)
@@ -641,17 +576,12 @@ async def advantage_spell_chok(message, s):
             pass
         return
 
-    # If no movies found
     if not movies:
         n = await s.edit_text(
             text=script.NOT_FILE_TXT.format(user_mention, search),
             reply_markup=InlineKeyboardMarkup(base_btn)
         )
-        await temp.BOT.send_message(
-            LOG_CHANNEL,
-            f"#No_Result\n\nRequester: {user_mention}\nContent: {search}"
-        )
-        await asyncio.sleep(60)
+        await asyncio.sleep(3600)
         await n.delete()
         try:
             await message.delete()
@@ -659,17 +589,14 @@ async def advantage_spell_chok(message, s):
             pass
         return
 
-    # Remove duplicates while preserving order
-    movies = list(dict.fromkeys(movies))
+    movies = list(dict.fromkeys(movies))  # remove duplicates
 
-    # Build suggestion buttons
     suggestion_buttons = [
         [InlineKeyboardButton(text=movie.get("title", "Unknown"), callback_data=f"spolling#{movie.movieID}#{user_id}")]
         for movie in movies
     ]
     suggestion_buttons.append([InlineKeyboardButton("🚫 Close 🚫", callback_data="close_data")])
 
-    # Show suggestions
     suggestion_msg = await s.edit_text(
         text=(
             f"👋 Hello {user_mention},\n\n"
@@ -679,8 +606,8 @@ async def advantage_spell_chok(message, s):
         reply_markup=InlineKeyboardMarkup(suggestion_buttons)
     )
 
-    # Auto-cleanup after 5 minutes
-    await asyncio.sleep(300)
+    # Auto-cleanup
+    await asyncio.sleep(3600)
     await suggestion_msg.delete()
     try:
         await message.delete()
