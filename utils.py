@@ -1,4 +1,4 @@
-from hydrogram.errors import UserNotParticipant, FloodWait
+from hydrogram.errors import UserNotParticipant, FloodWait import asyncio
 from hydrogram import enums
 from hydrogram.types import InlineKeyboardButton
 from info import LONG_IMDB_DESCRIPTION, ADMINS, TIME_ZONE
@@ -53,6 +53,33 @@ def upload_image(file_path):
     except Exception:
         return None
 
+
+# ------------------------------
+# Broadcast to users
+# ------------------------------
+async def broadcast_messages(user_id, message):
+    try:
+        await message.copy(chat_id=user_id)
+        return True, None
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        return await broadcast_messages(user_id, message)
+    except Exception as err:
+        return False, str(err)
+
+
+# ------------------------------
+# Broadcast to groups
+# ------------------------------
+async def groups_broadcast_messages(chat_id, message):
+    try:
+        await message.copy(chat_id=chat_id)
+        return True, None
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        return await groups_broadcast_messages(chat_id, message)
+    except Exception as err:
+        return False, str(err)
 
 async def get_poster(query, bulk=False, id=False, file=None):
     """Fetch movie/TV info from IMDB."""
