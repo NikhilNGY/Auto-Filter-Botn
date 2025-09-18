@@ -1,3 +1,4 @@
+
 import re
 import logging
 from os import environ
@@ -46,10 +47,16 @@ def get_int_env(name: str, default: int) -> int:
 
 
 # ---------------- BOT INFO ---------------- #
-API_ID = int(get_required_env("API_ID", "2468192"))
-API_HASH = get_required_env("API_HASH", "4906b3f8f198ec0e24edb2c197677678")
-BOT_TOKEN = get_required_env("BOT_TOKEN","")
-BOT_ID = int(BOT_TOKEN.split(":")[0])
+API_ID = get_int_env("API_ID")
+API_HASH = get_required_env("API_HASH")
+BOT_TOKEN = get_required_env("BOT_TOKEN")
+
+if BOT_TOKEN:
+    BOT_ID = int(BOT_TOKEN.split(":")[0])
+else:
+    logger.error("BOT_TOKEN is empty. Exiting now.")
+    exit(1)
+
 PORT = get_int_env("PORT", 8080)
 
 # ---------------- IMAGES ---------------- #
@@ -59,10 +66,19 @@ PICS = environ.get("PICS", "https://envs.sh/t3L.jpg").split() or ["https://envs.
 ADMINS = [int(x) for x in get_required_env("ADMINS", "2068233407 2098589219").split()]
 
 # ---------------- CHANNELS ---------------- #
-INDEX_CHANNELS = [int(x) if x.startswith("-") else x for x in environ.get("INDEX_CHANNELS", "-1001892397342").split()]
-LOG_CHANNEL = int(get_required_env("LOG_CHANNEL", "-1001693006436"))
-SUPPORT_GROUP = int(get_required_env("SUPPORT_GROUP", "-1002358414912"))
-DELETE_CHANNELS = [int(dch) if id_pattern.search(dch) else dch for dch in environ.get('DELETE_CHANNELS', '-1001396923650').split()]
+id_pattern = re.compile(r"^-?\d+$")  # Added pattern for checking IDs
+
+INDEX_CHANNELS = [
+    int(x) if id_pattern.match(x) else x for x in environ.get("INDEX_CHANNELS", "-1001892397342").split()
+]
+
+LOG_CHANNEL = int(get_required_env("LOG_CHANNEL"))
+SUPPORT_GROUP = int(get_required_env("SUPPORT_GROUP"))
+
+DELETE_CHANNELS = [
+    int(dch) if id_pattern.match(dch) else dch
+    for dch in environ.get("DELETE_CHANNELS", "-1001396923650").split()
+]
 
 # ---------------- DATABASES ---------------- #
 DATA_DATABASE_URL = get_required_env("DATA_DATABASE_URL")
@@ -104,7 +120,7 @@ PROTECT_CONTENT = is_enabled("PROTECT_CONTENT", False)
 LONG_IMDB_DESCRIPTION = is_enabled("LONG_IMDB_DESCRIPTION", False)
 LINK_MODE = is_enabled("LINK_MODE", False)
 IMDB = is_enabled("IMDB", False)
-SPELL_CHECK = is_enabled("SPELL_CHECK", True)
+SPELL_CHECK = is_enabled("SPELL_CHECK", False)
 SHORTLINK = is_enabled("SHORTLINK", False)
 
 # ---------------- REACTIONS & STICKERS ---------------- #
