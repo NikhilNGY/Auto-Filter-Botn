@@ -87,8 +87,8 @@ COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Files')
 SUPPORT_LINK = environ.get('SUPPORT_LINK', 'https://t.me/Sandalwood_Kannada_Group')
 UPDATES_LINK = environ.get('UPDATES_LINK', 'https://t.me/+pCz5eoun5Zk5YzRl')
 FILMS_LINK = environ.get('FILMS_LINK', 'https://t.me/sandalwood_kannada_moviesz')
-TUTORIAL = environ.get("TUTORIAL", "")
-VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "")
+TUTORIAL = environ.get("TUTORIAL", "https://t.me/how_to_opan_linkz/6")
+VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/how_to_opan_linkz/6")
 
 # Bot settings
 TIME_ZONE = environ.get('TIME_ZONE', 'Asia/Colombo') # Replace your time zone
@@ -98,7 +98,7 @@ MAX_BTN = int(environ.get('MAX_BTN', 8))
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", script.IMDB_TEMPLATE)
 FILE_CAPTION = environ.get("FILE_CAPTION", script.FILE_CAPTION)
 SHORTLINK_URL = environ.get("SHORTLINK_URL", "vplink.in")
-SHORTLINK_API = environ.get("SHORTLINK_API", "")
+SHORTLINK_API = environ.get("SHORTLINK_API", "ab42d0b5656f5c774f800dacb6739342b6f094aa")
 VERIFY_EXPIRE = int(environ.get('VERIFY_EXPIRE', 86400)) # Add time in seconds
 WELCOME_TEXT = environ.get("WELCOME_TEXT", script.WELCOME_TEXT)
 INDEX_EXTENSIONS = [extensions.lower() for extensions in environ.get('INDEX_EXTENSIONS', 'mp4 mkv').split()]
