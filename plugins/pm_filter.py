@@ -18,18 +18,16 @@ from plugins.commands import get_grp_stg
 BUTTONS = {}
 CAP = {}
 
+# -------------------- PM SEARCH -------------------- #
 @Client.on_message(filters.private & filters.text & filters.incoming)
 async def pm_search(client: Client, message):
-    # Ignore commands
     if message.text.startswith("/"):
         return
 
-    # Get bot settings
     stg = db.get_bot_sttgs() or {}
     if not stg.get('PM_SEARCH', False):
         return await message.reply_text('⚠️ PM search is currently disabled!')
 
-    # Check if user is premium
     user_id = message.from_user.id if message.from_user else None
     if not user_id:
         return
@@ -38,13 +36,11 @@ async def pm_search(client: Client, message):
         if not stg.get('AUTO_FILTER', False):
             return await message.reply_text('⚠️ Auto filter is currently disabled!')
 
-        # Send searching message
         s = await message.reply(f"<b><i>⚠️ `{message.text}` searching...</i></b>", quote=True)
         await auto_filter(client, message, s)
-
     else:
-        # Non-premium users: show as premium users limit search
-        files, n_offset, total = await get_search_results(message.text)
+        # Non-premium: show limited search
+        files, n_offset, total = await db.get_search_results(message.text)
 
         btn = [
             [InlineKeyboardButton("🗂 ᴄʟɪᴄᴋ ʜᴇʀᴇ 🗂", url=FILMS_LINK)],
@@ -58,6 +54,8 @@ async def pm_search(client: Client, message):
                 reply_markup=reply_markup
             )
 
+
+# -------------------- GROUP SEARCH -------------------- #
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def group_search(client: Client, message):
     chat_id = message.chat.id
@@ -79,9 +77,9 @@ async def group_search(client: Client, message):
         await message.reply("I'm not working for anonymous admin!")
         return
 
-    # Special handling for SUPPORT_GROUP
+    # Support group search
     if chat_id == SUPPORT_GROUP:
-        files, offset, total = await get_search_results(message.text)
+        files, offset, total = await db.get_search_results(message.text)
         if files:
             btn = [[InlineKeyboardButton("Here", url=FILMS_LINK)]]
             await message.reply_text(
@@ -90,11 +88,10 @@ async def group_search(client: Client, message):
             )
         return
 
-    # Ignore commands
     if message.text.startswith("/"):
         return
 
-    # Admin mentions
+    # Admin mentions handling
     if '@admin' in message.text.lower() or '@admins' in message.text.lower():
         if await is_check_admin(client, chat_id, user_id):
             return
@@ -129,7 +126,7 @@ async def group_search(client: Client, message):
         await message.reply('Links are not allowed here!')
         return
 
-    # Requests
+    # Requests handling
     if '#request' in message.text.lower():
         if user_id in ADMINS:
             return
