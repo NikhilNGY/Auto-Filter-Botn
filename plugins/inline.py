@@ -6,7 +6,7 @@ from hydrogram.types import (
     InlineQuery
 )
 from database.ia_filterdb import get_search_results
-from utils import get_size, temp, get_verify_status, is_subscribed, is_premium
+from utils import get_size, temp, get_verify_status, is_subscribed
 from info import CACHE_TIME, SUPPORT_LINK, UPDATES_LINK, FILE_CAPTION, IS_VERIFY
 
 cache_time = CACHE_TIME
@@ -38,18 +38,18 @@ async def inline_search(bot, query: InlineQuery):
         await query.answer(
             results=[],
             cache_time=0,
-            switch_pm_text="Join my Updates Channel :(",
+            switch_pm_text="Join my Updates Channel to use this bot!",
             switch_pm_parameter="inline_fsub"
         )
         return
 
-    # Verification check
+    # Verification check (optional)
     verify_status = await get_verify_status(query.from_user.id)
-    if IS_VERIFY and not verify_status['is_verified'] and not await is_premium(query.from_user.id, bot):
+    if IS_VERIFY and not verify_status['is_verified']:
         await query.answer(
             results=[],
             cache_time=0,
-            switch_pm_text="You're not verified today :(",
+            switch_pm_text="You're not verified yet.",
             switch_pm_parameter="inline_verify"
         )
         return
@@ -59,16 +59,26 @@ async def inline_search(bot, query: InlineQuery):
         await query.answer(
             results=[],
             cache_time=0,
-            switch_pm_text="You're a banned user :(",
+            switch_pm_text="You're a banned user.",
             switch_pm_parameter="start"
         )
         return
 
     # Fetch search results
     results = []
-    search_text = query.query
+    search_text = query.query.strip()
     offset = int(query.offset or 0)
-    files, next_offset, total = await get_search_results(search_text, offset=offset)
+
+    try:
+        files, next_offset, total = await get_search_results(search_text, offset=offset)
+    except Exception as e:
+        await query.answer(
+            results=[],
+            cache_time=0,
+            switch_pm_text=f"Error fetching results: {e}",
+            switch_pm_parameter="start"
+        )
+        return
 
     for file in files:
         reply_markup = get_reply_markup(search_text)
@@ -91,7 +101,7 @@ async def inline_search(bot, query: InlineQuery):
     if results:
         switch_pm_text = f"Results - {total}"
         if search_text:
-            switch_pm_text += f" For: {search_text}"
+            switch_pm_text += f" for: {search_text}"
 
         await query.answer(
             results=results,
@@ -102,9 +112,9 @@ async def inline_search(bot, query: InlineQuery):
             next_offset=str(next_offset)
         )
     else:
-        switch_pm_text = "No Results"
+        switch_pm_text = "No results found."
         if search_text:
-            switch_pm_text += f" For: {search_text}"
+            switch_pm_text += f" for: {search_text}"
 
         await query.answer(
             results=[],
