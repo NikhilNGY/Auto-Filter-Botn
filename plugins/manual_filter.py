@@ -1,9 +1,9 @@
 import re
 import asyncio
-from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup
 from database import filters_col  # MongoDB collection for filters
-from config import AUTO_DELETE, DELETE_TIME, ADMINS
+from config import AUTO_DELETE, ADMINS
 
 # ------------------------------
 # Add a manual filter with optional media
@@ -21,15 +21,15 @@ async def add_filter(client, message):
     try:
         _, keyword, *reply_text = message.text.split(" ")
         reply_text = " ".join(reply_text)
-    except:
-        return await message.reply_text("Usage: /addfilter <keyword> <reply_text> (or reply to media with /addfilter <keyword>)")
+    except ValueError:
+        return await message.reply_text(
+            "Usage: /addfilter <keyword> <reply_text> (or reply to media with /addfilter <keyword>)"
+        )
 
     file_id = None
     file_type = None
-    buttons = None
 
     if reply_msg:
-        # Detect media type
         if reply_msg.photo:
             file_id = reply_msg.photo.file_id
             file_type = "photo"
@@ -56,7 +56,7 @@ async def add_filter(client, message):
         "reply": reply_text,
         "file_id": file_id,
         "file_type": file_type,
-        "buttons": buttons
+        "buttons": None
     })
     await message.reply_text(f"✅ Filter '{keyword}' added successfully!")
 
@@ -74,7 +74,7 @@ async def delete_filter(client, message):
 
     try:
         _, keyword = message.text.split(" ")
-    except:
+    except ValueError:
         return await message.reply_text("Usage: /delfilter <keyword>")
 
     result = filters_col.delete_one({"chat_id": message.chat.id, "keyword": keyword.lower()})
@@ -92,7 +92,7 @@ async def list_filters(client, message):
     all_filters = list(filters_col.find({"chat_id": chat_id}))
     if not all_filters:
         return await message.reply_text("No filters set in this group.")
-    
+
     text = "**Filters in this group:**\n\n"
     for f in all_filters:
         text += f"- {f['keyword']}\n"
@@ -133,10 +133,10 @@ async def manual_filter_reply(client, message):
             # Auto delete both user and bot messages
             if AUTO_DELETE:
                 try:
-                    await asyncio.sleep(3600)
+                    await asyncio.sleep(DELETE_TIME)
                     await message.delete()
                     if sent:
                         await sent.delete()
                 except:
                     pass
-            break  # stop after first match
+            break  # Stop after first match
