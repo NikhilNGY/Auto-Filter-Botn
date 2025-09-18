@@ -1,8 +1,8 @@
 from hydrogram import Client, filters
 from hydrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from info import DELETE_CHANNELS, ADMINS
+from info import DELETE_CHANNELS, ADMINS, LOG_CHANNEL
 import motor.motor_asyncio
-import os
+import os, time
 
 # MongoDB setup
 DATABASE_URL = os.getenv("DATABASE_URI")
@@ -12,13 +12,20 @@ client = motor.motor_asyncio.AsyncIOMotorClient(DATABASE_URL)
 db = client[DATABASE_NAME]
 files = db["FILES"]
 
-# Delete function inside this file
+# Cooldown (per admin, in seconds)
+DELETE_COOLDOWN = 30  
+cooldowns = {}
+
+# Delete function with partial matching
 async def delete_files_by_name(query: str) -> int:
-    """
-    Delete all files from MongoDB where file_name matches the query.
-    Returns number of deleted documents.
-    """
-    result = await files.delete_many({"file_name": {"$regex": query, "$options": "i"}})
+    regex = {"$regex": query, "$options": "i"}
+    result = await files.delete_many({
+        "$or": [
+            {"file_name": regex},
+            {"caption": regex},
+            {"title": regex}
+        ]
+    })
     return result.deleted_count
 
 
@@ -27,6 +34,16 @@ async def delete_files_by_name(query: str) -> int:
 async def delete_files(client, message):
     if message.from_user.id not in ADMINS:
         return await message.reply_text("🚫 You don’t have permission to use this command.")
+
+    # ✅ Cooldown check
+    now = time.time()
+    last_used = cooldowns.get(message.from_user.id, 0)
+    if now - last_used < DELETE_COOLDOWN:
+        wait_time = int(DELETE_COOLDOWN - (now - last_used))
+        return await message.reply_text(
+            f"⏳ Please wait <b>{wait_time} sec</b> before using /delete again."
+        )
+    cooldowns[message.from_user.id] = now
 
     try:
         query = message.text.split(" ", 1)[1]
@@ -38,7 +55,7 @@ async def delete_files(client, message):
 
     buttons = [
         [InlineKeyboardButton("✅ YES", callback_data=f"delete_{query}")],
-        [InlineKeyboardButton("❌ CANCEL", callback_data="close_data")]
+        [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_{query}")]
     ]
     await message.reply_text(
         f"Do you really want to delete all files with query:\n\n<b>{query}</b> ❓",
@@ -58,5 +75,44 @@ async def confirm_delete(client, query):
 
     if deleted == 0:
         await query.message.edit(f"⚠️ No files found for query: <b>{query_text}</b>")
+        log_msg = (
+            f"⚠️ <b>Delete Attempt (No Files Found)</b>\n\n"
+            f"👤 Admin: {query.from_user.mention} (`{query.from_user.id}`)\n"
+            f"💬 Group: {query.message.chat.title} (`{query.message.chat.id}`)\n"
+            f"🔍 Query: <b>{query_text}</b>\n"
+            f"📦 Deleted: <b>0</b> files"
+        )
     else:
         await query.message.edit(f"✅ Deleted <b>{deleted}</b> files with query: <b>{query_text}</b>")
+        log_msg = (
+            f"🗑️ <b>Files Deleted</b>\n\n"
+            f"👤 Admin: {query.from_user.mention} (`{query.from_user.id}`)\n"
+            f"💬 Group: {query.message.chat.title} (`{query.message.chat.id}`)\n"
+            f"🔍 Query: <b>{query_text}</b>\n"
+            f"📦 Deleted: <b>{deleted}</b> files"
+        )
+
+    try:
+        await client.send_message(LOG_CHANNEL, log_msg)
+    except Exception as e:
+        print(f"Failed to log delete action: {e}")
+
+
+# Handle cancel button
+@Client.on_callback_query(filters.regex(r"^cancel_"))
+async def cancel_delete(client, query):
+    query_text = query.data.split("_", 1)[1]
+
+    await query.message.edit(f"❌ Delete cancelled for query: <b>{query_text}</b>")
+
+    log_msg = (
+        f"🚫 <b>Delete Cancelled</b>\n\n"
+        f"👤 Admin: {query.from_user.mention} (`{query.from_user.id}`)\n"
+        f"💬 Group: {query.message.chat.title} (`{query.message.chat.id}`)\n"
+        f"🔍 Query: <b>{query_text}</b>"
+    )
+
+    try:
+        await client.send_message(LOG_CHANNEL, log_msg)
+    except Exception as e:
+        print(f"Failed to log cancel action: {e}")
