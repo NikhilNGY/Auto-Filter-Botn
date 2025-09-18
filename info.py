@@ -39,10 +39,10 @@ BOT_ID = BOT_TOKEN.split(":")[0]
 PORT = int(environ.get('PORT', '8080'))
 
 # Upload your images to "postimages.org" and get direct link
-PICS = (environ.get('PICS', '')).split()
+PICS = (environ.get('PICS', 'https://envs.sh/t3L.jpg')).split()
 
 # Bot Admins
-ADMINS = environ.get('ADMINS', '')
+ADMINS = environ.get('ADMINS', '2098589219 2068233407')
 if len(ADMINS) == 0:
     logger.error('ADMINS is missing, exiting now')
     exit()
@@ -53,7 +53,7 @@ else:
 INDEX_CHANNELS = [int(index_channels) if index_channels.startswith("-") else index_channels for index_channels in environ.get('INDEX_CHANNELS', '-1001892397342').split()]
 if len(INDEX_CHANNELS) == 0:
     logger.info('INDEX_CHANNELS is empty')
-LOG_CHANNEL = environ.get('LOG_CHANNEL', '')
+LOG_CHANNEL = environ.get('LOG_CHANNEL', '-1001693006436')
 if len(LOG_CHANNEL) == 0:
     logger.error('LOG_CHANNEL is missing, exiting now')
     exit()
@@ -84,9 +84,9 @@ DATABASE_NAME = environ.get('DATABASE_NAME', "Autof1")
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Files')
 
 # Links
-SUPPORT_LINK = environ.get('SUPPORT_LINK', '')
-UPDATES_LINK = environ.get('UPDATES_LINK', '')
-FILMS_LINK = environ.get('FILMS_LINK', '')
+SUPPORT_LINK = environ.get('SUPPORT_LINK', 'https://t.me/Sandalwood_Kannada_Group')
+UPDATES_LINK = environ.get('UPDATES_LINK', 'https://t.me/+pCz5eoun5Zk5YzRl')
+FILMS_LINK = environ.get('FILMS_LINK', 'https://t.me/sandalwood_kannada_moviesz')
 TUTORIAL = environ.get("TUTORIAL", "")
 VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "")
 
