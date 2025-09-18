@@ -143,10 +143,11 @@ async def group_search(client: Client, message):
     await auto_filter(client, message, s)
 
 @Client.on_callback_query(filters.regex(r"^next"))
-async def next_page(bot: Client, query):
+async def next_page(bot: Client, query: CallbackQuery):
     try:
         ident, req, key, offset = query.data.split("_")
         user_id = query.from_user.id
+
         if int(req) not in [user_id, 0]:
             return await query.answer(
                 f"Hello {query.from_user.first_name},\nDon't click other users' results!",
@@ -158,20 +159,19 @@ async def next_page(bot: Client, query):
         except ValueError:
             offset = 0
 
-        search = temp.FILES.get(key)
+        search_text = temp.FILES.get(key)
         cap = temp.FILES.get(f"cap_{key}", "")
 
-        if not search:
-            await query.answer(
+        if not search_text:
+            return await query.answer(
                 f"Hello {query.from_user.first_name},\nSend a new request again!",
                 show_alert=True
             )
-            return
 
-        files, n_offset, total = await get_search_results(search, offset=offset)
+        files, n_offset, total = await get_search_results(search_text, offset=offset)
         try:
             n_offset = int(n_offset)
-        except:
+        except Exception:
             n_offset = 0
 
         if not files:
@@ -182,45 +182,53 @@ async def next_page(bot: Client, query):
         del_msg = f"\n\n<b>⚠️ This message will auto-delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
         files_link = ''
 
-        # Text links
+        # Text links or inline buttons
         if settings.get('links'):
             for idx, file in enumerate(files, start=offset + 1):
                 files_link += f"\n<b>{idx}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"
             btn = []
-        else:  # Inline buttons
+        else:
             btn = [
                 [InlineKeyboardButton(f"{get_size(file['file_size'])} - {file['file_name']}", callback_data=f"file#{file['_id']}")]
                 for file in files
             ]
 
-        # Extra buttons
-        languages_btn = [InlineKeyboardButton("📰 Languages", callback_data=f"languages#{key}#{req}#{offset}"),
-                         InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")]
-        
+        # Send All button
         if settings.get('shortlink') and not await is_premium(user_id, bot):
-            send_all_btn = [InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}'))]
+            send_all_btn = [
+                InlineKeyboardButton(
+                    "♻️ Send All ♻️",
+                    url=f"https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}"
+                )
+            ]
         else:
             send_all_btn = [InlineKeyboardButton("♻️ Send All", callback_data=f"send_all#{key}#{req}")]
 
-        # Pagination logic
+        # Pagination
         off_set = 0 if 0 < offset <= MAX_BTN else None if offset == 0 else offset - MAX_BTN
         page_btn = []
         current_page = math.ceil(int(offset) / MAX_BTN) + 1
         total_pages = math.ceil(total / MAX_BTN)
 
         if n_offset == 0:
-            page_btn = [InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
-                        InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons")]
+            page_btn = [
+                InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
+                InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons")
+            ]
         elif off_set is None:
-            page_btn = [InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
-                        InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")]
+            page_btn = [
+                InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
+                InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")
+            ]
         else:
-            page_btn = [InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
-                        InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
-                        InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")]
+            page_btn = [
+                InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
+                InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
+                InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")
+            ]
 
-        btn.insert(0, languages_btn)
-        btn.insert(1, send_all_btn)
+        # Build final buttons
+        btn.insert(0, send_all_btn)
         btn.append([InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")])
         btn.append(page_btn)
 
@@ -230,325 +238,9 @@ async def next_page(bot: Client, query):
             disable_web_page_preview=True,
             parse_mode=enums.ParseMode.HTML
         )
-    except Exception as e:
+
+    except Exception:
         await query.answer("An error occurred, please try again.", show_alert=True)
-
-from hydrogram import Client, filters, enums
-from hydrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from utils import get_search_results, get_settings, get_readable_time, get_size, is_premium, temp
-from info import QUALITY, DELETE_TIME
-import math
-
-@Client.on_callback_query(filters.regex(r"^quality"))
-async def quality_callback(client: Client, query: CallbackQuery):
-    try:
-        _, key, req, offset = query.data.split("#")
-        if int(req) != query.from_user.id:
-            return await query.answer(
-                f"Hello {query.from_user.first_name},\nDon't click other results!",
-                show_alert=True
-            )
-
-        # Build quality selection buttons (two per row)
-        btn = [
-            [
-                InlineKeyboardButton(text=QUALITY[i].title(), callback_data=f"qual_search#{QUALITY[i]}#{key}#{offset}#{req}"),
-                InlineKeyboardButton(text=QUALITY[i+1].title(), callback_data=f"qual_search#{QUALITY[i+1]}#{key}#{offset}#{req}")
-            ] for i in range(0, len(QUALITY)-1, 2)
-        ]
-        # Back to main page button
-        btn.append([InlineKeyboardButton(text="⪻ Back to Main Page", callback_data=f"next_{req}_{key}_{offset}")])
-
-        await query.message.edit_text(
-            "<b>Select the quality you want 👇</b>",
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup(btn)
-        )
-    except Exception as e:
-        await query.answer("An error occurred. Please try again.", show_alert=True)
-
-
-@Client.on_callback_query(filters.regex(r"^lang_search"))
-async def filter_languages_callback(client: Client, query: CallbackQuery):
-    try:
-        _, lang, key, offset, req = query.data.split("#")
-        if int(req) != query.from_user.id:
-            return await query.answer(
-                f"Hello {query.from_user.first_name},\nDon't click other results!",
-                show_alert=True
-            )
-
-        search = temp.FILES.get(key)
-        cap = temp.FILES.get(f"cap_{key}", "")
-
-        if not search:
-            return await query.answer(
-                f"Hello {query.from_user.first_name},\nSend a new request again!",
-                show_alert=True
-            )
-
-        files, l_offset, total_results = await get_search_results(search, lang=lang)
-        if not files:
-            return await query.answer(
-                f"Sorry, '{lang.title()}' language files not found 😕",
-                show_alert=True
-            )
-
-        temp.FILES[key] = files
-        settings = await get_settings(query.message.chat.id)
-        del_msg = f"\n\n<b>⚠️ This message will auto-delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
-        files_link = ''
-
-        # Create file links or buttons
-        if settings.get('links'):
-            for idx, file in enumerate(files, start=1):
-                files_link += f"<b>\n\n{idx}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"
-            btn = []
-        else:
-            btn = [
-                [InlineKeyboardButton(f"{get_size(file['file_size'])} - {file['file_name']}", callback_data=f"file#{file['_id']}")]
-                for file in files
-            ]
-
-        # Add send all and quality buttons
-        if settings.get('shortlink') and not await is_premium(query.from_user.id, client):
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}')),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")
-            ])
-        else:
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All", callback_data=f"send_all#{key}#{req}"),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")
-            ])
-
-        # Pagination for language results
-        if l_offset:
-            btn.append([
-                InlineKeyboardButton(f"1/{math.ceil(int(total_results) / 8)}", callback_data="buttons"),
-                InlineKeyboardButton("Next »", callback_data=f"lang_next#{req}#{key}#{lang}#{l_offset}#{offset}")
-            ])
-
-        # Back to main page button
-        btn.append([InlineKeyboardButton("⪻ Back to Main Page", callback_data=f"next_{req}_{key}_{offset}")])
-
-        await query.message.edit_text(
-            cap + files_link + del_msg,
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup(btn),
-            parse_mode=enums.ParseMode.HTML
-        )
-
-    except Exception as e:
-        await query.answer("An error occurred. Please try again.", show_alert=True)
-
-@Client.on_callback_query(filters.regex(r"^lang_next"))
-async def lang_next_page(bot: Client, query: CallbackQuery):
-    try:
-        _, req, key, lang, l_offset, offset = query.data.split("#")
-        if int(req) != query.from_user.id:
-            return await query.answer(
-                f"Hello {query.from_user.first_name},\nDon't click other results!",
-                show_alert=True
-            )
-
-        l_offset = int(l_offset) if l_offset.isdigit() else 0
-        offset = int(offset) if offset.isdigit() else 0
-
-        search = temp.FILES.get(key)
-        cap = temp.FILES.get(f"cap_{key}", "")
-        if not search:
-            return await query.answer(
-                f"Hello {query.from_user.first_name},\nSend a new request again!",
-                show_alert=True
-            )
-
-        settings = await get_settings(query.message.chat.id)
-        del_msg = f"\n\n<b>⚠️ This message will auto-delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
-
-        files, n_offset, total = await get_search_results(search, offset=l_offset, lang=lang)
-        if not files:
-            return
-
-        temp.FILES[key] = files
-        n_offset = int(n_offset) if n_offset else 0
-
-        # Build message content
-        files_link = ''
-        if settings.get('links'):
-            for idx, file in enumerate(files, start=l_offset + 1):
-                files_link += f"<b>\n\n{idx}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"
-            btn = []
-        else:
-            btn = [[InlineKeyboardButton(f"{get_size(file['file_size'])} - {file['file_name']}", callback_data=f"file#{file['_id']}")] for file in files]
-
-        # Add send all / quality buttons
-        if settings.get('shortlink') and not await is_premium(query.from_user.id, bot):
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}')),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{l_offset}")
-            ])
-        else:
-            btn.insert(1, [
-                InlineKeyboardButton("♻️ Send All ♻️", callback_data=f"send_all#{key}#{req}"),
-                InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{l_offset}")
-            ])
-
-        # Pagination buttons
-        if 0 < l_offset <= MAX_BTN:
-            b_offset = 0
-        elif l_offset == 0:
-            b_offset = None
-        else:
-            b_offset = l_offset - MAX_BTN
-
-        page_number = math.ceil(l_offset / MAX_BTN) + 1
-        total_pages = math.ceil(total / MAX_BTN) if total else 1
-
-        if n_offset == 0:
-            btn.append([
-                InlineKeyboardButton("« Back", callback_data=f"lang_next#{req}#{key}#{lang}#{b_offset}#{offset}"),
-                InlineKeyboardButton(f"{page_number}/{total_pages}", callback_data="buttons")
-            ])
-        elif b_offset is None:
-            btn.append([
-                InlineKeyboardButton(f"{page_number}/{total_pages}", callback_data="buttons"),
-                InlineKeyboardButton("Next »", callback_data=f"lang_next#{req}#{key}#{lang}#{n_offset}#{offset}")
-            ])
-        else:
-            btn.append([
-                InlineKeyboardButton("« Back", callback_data=f"lang_next#{req}#{key}#{lang}#{b_offset}#{offset}"),
-                InlineKeyboardButton(f"{page_number}/{total_pages}", callback_data="buttons"),
-                InlineKeyboardButton("Next »", callback_data=f"lang_next#{req}#{key}#{lang}#{n_offset}#{offset}")
-            ])
-
-        # Back to main page button
-        btn.append([InlineKeyboardButton("⪻ Back to Main Page", callback_data=f"next_{req}_{key}_{offset}")])
-
-        await query.message.edit_text(
-            cap + files_link + del_msg,
-            reply_markup=InlineKeyboardMarkup(btn),
-            disable_web_page_preview=True,
-            parse_mode=enums.ParseMode.HTML
-        )
-
-    except Exception as e:
-        await query.answer("An error occurred. Please try again.", show_alert=True)
-
-async def build_file_buttons(files, chat_id, key, req, offset, settings, premium=False):
-    """Build message text and InlineKeyboardMarkup for files."""
-    files_link = ''
-    if settings['links']:
-        for i, file in enumerate(files, start=offset + 1):
-            files_link += f"<b>\n\n{i}. <a href=https://t.me/{temp.U_NAME}?start=file_{chat_id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"
-        btn = []
-    else:
-        btn = [[InlineKeyboardButton(f"{get_size(f['file_size'])} - {f['file_name']}", callback_data=f"file#{f['_id']}")] for f in files]
-
-    # Add send all button
-    if settings['shortlink'] and not premium:
-        btn.insert(0, [InlineKeyboardButton(
-            "♻️ Send All ♻️",
-            url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{chat_id}_{key}')
-        )])
-    else:
-        btn.insert(0, [InlineKeyboardButton("♻️ Send All ♻️", callback_data=f"send_all#{key}#{req}")])
-
-    return files_link, btn
-
-def get_back_offset(current_offset):
-    if 0 < current_offset <= MAX_BTN:
-        return 0
-    elif current_offset == 0:
-        return None
-    else:
-        return current_offset - MAX_BTN
-
-@Client.on_callback_query(filters.regex(r"^qual_search"))
-async def quality_search(client: Client, query: CallbackQuery):
-    _, qual, key, offset, req = query.data.split("#")
-    req = int(req)
-    if req != query.from_user.id:
-        return await query.answer("Don't Click Other Results!", show_alert=True)
-
-    search = BUTTONS.get(key)
-    cap = CAP.get(key)
-    if not search:
-        return await query.answer("Send New Request Again!", show_alert=True)
-
-    files, l_offset, total_results = await get_search_results(search, lang=qual)
-    if not files:
-        return await query.answer(f"sᴏʀʀʏ '{qual.title()}' files not found 😕", show_alert=True)
-
-    temp.FILES[key] = files
-    settings = await get_settings(query.message.chat.id)
-    del_msg = f"\n\n<b>⚠️ This message will auto delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
-
-    files_link, btn = await build_file_buttons(files, query.message.chat.id, key, req, 0, settings)
-
-    if l_offset:
-        btn.append([
-            InlineKeyboardButton(f"1/{math.ceil(int(total_results)/MAX_BTN)}", callback_data="buttons"),
-            InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"qual_next#{req}#{key}#{qual}#{l_offset}#{offset}")
-        ])
-    btn.append([InlineKeyboardButton("⪻ Back to Main Page", callback_data=f"next_{req}_{key}_{offset}")])
-
-    await query.message.edit_text(cap + files_link + del_msg, disable_web_page_preview=True,
-                                  reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
-
-
-@Client.on_callback_query(filters.regex(r"^qual_next"))
-async def quality_next_page(client: Client, query: CallbackQuery):
-    _, req, key, qual, l_offset, offset = query.data.split("#")
-    req = int(req)
-    if req != query.from_user.id:
-        return await query.answer("Don't Click Other Results!", show_alert=True)
-
-    try:
-        l_offset = int(l_offset)
-    except:
-        l_offset = 0
-
-    search = BUTTONS.get(key)
-    cap = CAP.get(key)
-    if not search:
-        return await query.answer("Send New Request Again!", show_alert=True)
-
-    files, n_offset, total = await get_search_results(search, offset=l_offset, lang=qual)
-    if not files:
-        return
-
-    temp.FILES[key] = files
-    settings = await get_settings(query.message.chat.id)
-    del_msg = f"\n\n<b>⚠️ This message will auto delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
-
-    files_link, btn = await build_file_buttons(files, query.message.chat.id, key, req, l_offset, settings)
-
-    b_offset = get_back_offset(l_offset)
-    page_num = math.ceil(l_offset / MAX_BTN) + 1
-
-    # Pagination buttons
-    if n_offset == 0:
-        btn.append([
-            InlineKeyboardButton("« Back", callback_data=f"qual_next#{req}#{key}#{qual}#{b_offset}#{offset}"),
-            InlineKeyboardButton(f"{page_num}/{math.ceil(total/MAX_BTN)}", callback_data="buttons")
-        ])
-    elif b_offset is None:
-        btn.append([
-            InlineKeyboardButton(f"{page_num}/{math.ceil(total/MAX_BTN)}", callback_data="buttons"),
-            InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"qual_next#{req}#{key}#{qual}#{n_offset}#{offset}")
-        ])
-    else:
-        btn.append([
-            InlineKeyboardButton("« Back", callback_data=f"qual_next#{req}#{key}#{qual}#{b_offset}#{offset}"),
-            InlineKeyboardButton(f"{page_num}/{math.ceil(total/MAX_BTN)}", callback_data="buttons"),
-            InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"qual_next#{req}#{key}#{qual}#{n_offset}#{offset}")
-        ])
-
-    btn.append([InlineKeyboardButton("⪻ Back to Main Page", callback_data=f"next_{req}_{key}_{offset}")])
-
-    await query.message.edit_text(cap + files_link + del_msg, disable_web_page_preview=True,
-                                  reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
 
 @Client.on_callback_query(filters.regex(r"^spolling"))
 async def advantage_spoll_choker(bot, query):
