@@ -59,170 +59,182 @@ async def pm_search(client: Client, message):
             )
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
-async def group_search(client, message):
+async def group_search(client: Client, message):
     chat_id = message.chat.id
-    user_id = message.from_user.id if message and message.from_user else 0
-    stg = db.get_bot_sttgs()
-    if stg.get('AUTO_FILTER'):
-        if not user_id:
-            await message.reply("I'm not working for anonymous admin!")
-            return
-        if message.chat.id == SUPPORT_GROUP:
-            files, offset, total = await get_search_results(message.text)
-            if files:
-                btn = [[
-                    InlineKeyboardButton("Here", url=FILMS_LINK)
-                ]]
-                await message.reply_text(f'Total {total} results found in this group', reply_markup=InlineKeyboardMarkup(btn))
-            return
-            
-        if message.text.startswith("/"):
-            return
-            
-        elif '@admin' in message.text.lower() or '@admins' in message.text.lower():
-            if await is_check_admin(client, message.chat.id, message.from_user.id):
-                return
-            admins = []
-            async for member in client.get_chat_members(chat_id=message.chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-                if not member.user.is_bot:
-                    admins.append(member.user.id)
-                    if member.status == enums.ChatMemberStatus.OWNER:
-                        if message.reply_to_message:
-                            try:
-                                sent_msg = await message.reply_to_message.forward(member.user.id)
-                                await sent_msg.reply_text(f"#Attention\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ <a href={message.reply_to_message.link}>Go to message</a>", disable_web_page_preview=True)
-                            except:
-                                pass
-                        else:
-                            try:
-                                sent_msg = await message.forward(member.user.id)
-                                await sent_msg.reply_text(f"#Attention\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ <a href={message.link}>Go to message</a>", disable_web_page_preview=True)
-                            except:
-                                pass
-            hidden_mentions = (f'[\u2064](tg://user?id={user_id})' for user_id in admins)
-            await message.reply_text('Report sent!' + ''.join(hidden_mentions))
-            return
+    user = message.from_user
+    user_id = user.id if user else None
+    stg = db.get_bot_sttgs() or {}
 
-        elif re.findall(r'https?://\S+|www\.\S+|t\.me/\S+|@\w+', message.text):
-            if await is_check_admin(client, message.chat.id, message.from_user.id):
-                return
-            await message.delete()
-            return await message.reply('Links not allowed here!')
-        
-        elif '#request' in message.text.lower():
-            if message.from_user.id in ADMINS:
-                return
-            await client.send_message(LOG_CHANNEL, f"#Request\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ Message: {re.sub(r'#request', '', message.text.lower())}")
-            await message.reply_text("Request sent!")
-            return  
-        else:
-            s = await message.reply(f"<b><i>⚠️ `{message.text}` searching...</i></b>")
-            await auto_filter(client, message, s)
-    else:
-        k = await message.reply_text('Auto Filter Off! ❌')
+    if not stg.get('AUTO_FILTER', False):
+        tmp_msg = await message.reply_text('Auto Filter is OFF! ❌')
         await asyncio.sleep(5)
-        await k.delete()
+        await tmp_msg.delete()
         try:
             await message.delete()
         except:
             pass
+        return
+
+    if not user_id:
+        await message.reply("I'm not working for anonymous admin!")
+        return
+
+    # Special handling for SUPPORT_GROUP
+    if chat_id == SUPPORT_GROUP:
+        files, offset, total = await get_search_results(message.text)
+        if files:
+            btn = [[InlineKeyboardButton("Here", url=FILMS_LINK)]]
+            await message.reply_text(
+                f'Total {total} results found in this group',
+                reply_markup=InlineKeyboardMarkup(btn)
+            )
+        return
+
+    # Ignore commands
+    if message.text.startswith("/"):
+        return
+
+    # Admin mentions
+    if '@admin' in message.text.lower() or '@admins' in message.text.lower():
+        if await is_check_admin(client, chat_id, user_id):
+            return
+
+        admins = []
+        async for member in client.get_chat_members(chat_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            if not member.user.is_bot:
+                admins.append(member.user.id)
+                if member.status == enums.ChatMemberStatus.OWNER:
+                    target_msg = message.reply_to_message or message
+                    try:
+                        sent_msg = await target_msg.forward(member.user.id)
+                        await sent_msg.reply_text(
+                            f"#Attention\n★ User: {user.mention}\n★ Group: {message.chat.title}\n\n"
+                            f"★ <a href={target_msg.link}>Go to message</a>",
+                            disable_web_page_preview=True
+                        )
+                    except:
+                        pass
+        hidden_mentions = ''.join(f'[\u2064](tg://user?id={uid})' for uid in admins)
+        await message.reply_text('Report sent!' + hidden_mentions)
+        return
+
+    # Link protection
+    if re.findall(r'https?://\S+|www\.\S+|t\.me/\S+|@\w+', message.text):
+        if await is_check_admin(client, chat_id, user_id):
+            return
+        try:
+            await message.delete()
+        except:
+            pass
+        await message.reply('Links are not allowed here!')
+        return
+
+    # Requests
+    if '#request' in message.text.lower():
+        if user_id in ADMINS:
+            return
+        await client.send_message(
+            LOG_CHANNEL,
+            f"#Request\n★ User: {user.mention}\n★ Group: {message.chat.title}\n\n"
+            f"★ Message: {re.sub(r'#request', '', message.text, flags=re.IGNORECASE)}"
+        )
+        await message.reply_text("Request sent!")
+        return
+
+    # Auto-filter search
+    s = await message.reply(f"<b><i>⚠️ `{message.text}` searching...</i></b>")
+    await auto_filter(client, message, s)
 
 @Client.on_callback_query(filters.regex(r"^next"))
-async def next_page(bot, query):
-    ident, req, key, offset = query.data.split("_")
-    if int(req) not in [query.from_user.id, 0]:
-        return await query.answer(f"Hello {query.from_user.first_name},\nDon't Click Other Results!", show_alert=True)
+async def next_page(bot: Client, query):
     try:
-        offset = int(offset)
-    except:
-        offset = 0
-    search = BUTTONS.get(key)
-    cap = CAP.get(key)
-    if not search:
-        await query.answer(f"Hello {query.from_user.first_name},\nSend New Request Again!", show_alert=True)
-        return
+        ident, req, key, offset = query.data.split("_")
+        user_id = query.from_user.id
+        if int(req) not in [user_id, 0]:
+            return await query.answer(
+                f"Hello {query.from_user.first_name},\nDon't click other users' results!",
+                show_alert=True
+            )
 
-    files, n_offset, total = await get_search_results(search, offset=offset)
-    try:
-        n_offset = int(n_offset)
-    except:
-        n_offset = 0
+        try:
+            offset = int(offset)
+        except ValueError:
+            offset = 0
 
-    if not files:
-        return
-    temp.FILES[key] = files
-    settings = await get_settings(query.message.chat.id)
-    del_msg = f"\n\n<b>⚠️ ᴛʜɪs ᴍᴇssᴀɢᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ <code>{get_readable_time(DELETE_TIME)}</code> ᴛᴏ ᴀᴠᴏɪᴅ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs</b>" if settings["auto_delete"] else ''
-    files_link = ''
+        search = temp.FILES.get(key)
+        cap = temp.FILES.get(f"cap_{key}", "")
 
-    if settings['links']:
-        btn = []
-        for file_num, file in enumerate(files, start=offset+1):
-            files_link += f"""<b>\n\n{file_num}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"""
-    else:
-        btn = [[
-            InlineKeyboardButton(text=f"{get_size(file['file_size'])} - {file['file_name']}", callback_data=f"file#{file['_id']}")
-        ]
-            for file in files
-        ]
-    if settings['shortlink'] and not await is_premium(query.from_user.id, bot):
-        btn.insert(0,
-            [InlineKeyboardButton("📰 ʟᴀɴɢᴜᴀɢᴇs", callback_data=f"languages#{key}#{req}#{offset}"),
-            InlineKeyboardButton("🔍 ǫᴜᴀʟɪᴛʏ", callback_data=f"quality#{key}#{req}#{offset}")]
-        )
-        btn.insert(1,
-            [InlineKeyboardButton("♻️ sᴇɴᴅ ᴀʟʟ ♻️", url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}'))]
-        )
-    else:
-        btn.insert(0,
-            [InlineKeyboardButton("📰 ʟᴀɴɢᴜᴀɢᴇs", callback_data=f"languages#{key}#{req}#{offset}"),
-            InlineKeyboardButton("🔍 ǫᴜᴀʟɪᴛʏ", callback_data=f"quality#{key}#{req}#{offset}")]
-        )
-        btn.insert(1,
-            [InlineKeyboardButton("♻️ sᴇɴᴅ ᴀʟʟ", callback_data=f"send_all#{key}#{req}")]
-        )
+        if not search:
+            await query.answer(
+                f"Hello {query.from_user.first_name},\nSend a new request again!",
+                show_alert=True
+            )
+            return
 
-    if 0 < offset <= MAX_BTN:
-        off_set = 0
-    elif offset == 0:
-        off_set = None
-    else:
-        off_set = offset - MAX_BTN
-        
-    if n_offset == 0:
-        btn.append(
-            [InlineKeyboardButton("« ʙᴀᴄᴋ", callback_data=f"next_{req}_{key}_{off_set}"),
-             InlineKeyboardButton(f"{math.ceil(int(offset) / MAX_BTN) + 1}/{math.ceil(total / MAX_BTN)}", callback_data="buttons")]
-        )
-    elif off_set is None:
-        btn.append(
-            [InlineKeyboardButton(f"{math.ceil(int(offset) / MAX_BTN) + 1}/{math.ceil(total / MAX_BTN)}", callback_data="buttons"),
-             InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"next_{req}_{key}_{n_offset}")])
-    else:
-        btn.append(
-            [
-                InlineKeyboardButton("« ʙᴀᴄᴋ", callback_data=f"next_{req}_{key}_{off_set}"),
-                InlineKeyboardButton(f"{math.ceil(int(offset) / MAX_BTN) + 1}/{math.ceil(total / MAX_BTN)}", callback_data="buttons"),
-                InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"next_{req}_{key}_{n_offset}")
+        files, n_offset, total = await get_search_results(search, offset=offset)
+        try:
+            n_offset = int(n_offset)
+        except:
+            n_offset = 0
+
+        if not files:
+            return
+
+        temp.FILES[key] = files
+        settings = await get_settings(query.message.chat.id)
+        del_msg = f"\n\n<b>⚠️ This message will auto-delete after <code>{get_readable_time(DELETE_TIME)}</code> to avoid copyright issues</b>" if settings.get("auto_delete") else ''
+        files_link = ''
+
+        # Text links
+        if settings.get('links'):
+            for idx, file in enumerate(files, start=offset + 1):
+                files_link += f"\n<b>{idx}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file['_id']}>[{get_size(file['file_size'])}] {file['file_name']}</a></b>"
+            btn = []
+        else:  # Inline buttons
+            btn = [
+                [InlineKeyboardButton(f"{get_size(file['file_size'])} - {file['file_name']}", callback_data=f"file#{file['_id']}")]
+                for file in files
             ]
-        )
-    btn.append(
-        [InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")]
-    )
-    await query.message.edit_text(cap + files_link + del_msg, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
 
-@Client.on_callback_query(filters.regex(r"^languages"))
-async def languages_(client: Client, query: CallbackQuery):
-    _, key, req, offset = query.data.split("#")
-    if int(req) != query.from_user.id:
-        return await query.answer(f"Hello {query.from_user.first_name},\nDon't Click Other Results!", show_alert=True)
-    btn = [
-        [InlineKeyboardButton(text=LANGUAGES[i].title(), callback_data=f"lang_search#{LANGUAGES[i]}#{key}#{offset}#{req}"),
-         InlineKeyboardButton(text=LANGUAGES[i+1].title(), callback_data=f"lang_search#{LANGUAGES[i+1]}#{key}#{offset}#{req}")]
-        for i in range(0, len(LANGUAGES)-1, 2)
-    ]
-    btn.append([InlineKeyboardButton(text="⪻ ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴘᴀɢᴇ", callback_data=f"next_{req}_{key}_{offset}")])  
-    await query.message.edit_text("<b>ɪɴ ᴡʜɪᴄʜ ʟᴀɴɢᴜᴀɢᴇ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ, sᴇʟᴇᴄᴛ ʜᴇʀᴇ 👇</b>", disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup(btn))
+        # Extra buttons
+        languages_btn = [InlineKeyboardButton("📰 Languages", callback_data=f"languages#{key}#{req}#{offset}"),
+                         InlineKeyboardButton("🔍 Quality", callback_data=f"quality#{key}#{req}#{offset}")]
+        
+        if settings.get('shortlink') and not await is_premium(user_id, bot):
+            send_all_btn = [InlineKeyboardButton("♻️ Send All ♻️", url=await get_shortlink(settings['url'], settings['api'], f'https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}'))]
+        else:
+            send_all_btn = [InlineKeyboardButton("♻️ Send All", callback_data=f"send_all#{key}#{req}")]
+
+        # Pagination logic
+        off_set = 0 if 0 < offset <= MAX_BTN else None if offset == 0 else offset - MAX_BTN
+        page_btn = []
+        current_page = math.ceil(int(offset) / MAX_BTN) + 1
+        total_pages = math.ceil(total / MAX_BTN)
+
+        if n_offset == 0:
+            page_btn = [InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
+                        InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons")]
+        elif off_set is None:
+            page_btn = [InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
+                        InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")]
+        else:
+            page_btn = [InlineKeyboardButton("« Back", callback_data=f"next_{req}_{key}_{off_set}"),
+                        InlineKeyboardButton(f"{current_page}/{total_pages}", callback_data="buttons"),
+                        InlineKeyboardButton("Next »", callback_data=f"next_{req}_{key}_{n_offset}")]
+
+        btn.insert(0, languages_btn)
+        btn.insert(1, send_all_btn)
+        btn.append([InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")])
+        btn.append(page_btn)
+
+        await query.message.edit_text(
+            cap + files_link + del_msg,
+            reply_markup=InlineKeyboardMarkup(btn),
+            disable_web_page_preview=True,
+            parse_mode=enums.ParseMode.HTML
+        )
+    except Exception as e:
+        await query.answer("An error occurred, please try again.", show_alert=True)
 
 @Client.on_callback_query(filters.regex(r"^quality"))
 async def quality(client: Client, query: CallbackQuery):
