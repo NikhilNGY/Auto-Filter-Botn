@@ -323,24 +323,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer(url=f"https://t.me/{temp.U_NAME}?start=all_{group_id}_{key}")
         await query.message.delete()
         
-    elif query.data.startswith("stream"):
-        file_id = query.data.split('#', 1)[1]
-        if not await is_premium(query.from_user.id, client):
-            return await query.answer(f"Only for premium users, use /plan for details", show_alert=True)
-        msg = await client.send_cached_media(chat_id=BIN_CHANNEL, file_id=file_id)
-        watch = f"{URL}watch/{msg.id}"
-        download = f"{URL}download/{msg.id}"
-        btn=[[
-            InlineKeyboardButton("ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ", url=watch),
-            InlineKeyboardButton("ꜰᴀsᴛ ᴅᴏᴡɴʟᴏᴀᴅ", url=download)
-        ],[
-            InlineKeyboardButton('❌ ᴄʟᴏsᴇ ❌', callback_data='close_data')
-        ]]
-        reply_markup=InlineKeyboardMarkup(btn)
-        await query.edit_message_reply_markup(
-            reply_markup=reply_markup
-        )
-    
             
     elif query.data.startswith("checksub"):
         ident, mc = query.data.split("#")
@@ -361,51 +343,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "instructions":
         await query.answer("Movie request format.\nExample:\nBlack Adam or Black Adam 2022\n\nTV Reries request format.\nExample:\nLoki S01E01 or Loki S01 E01\n\nDon't use symbols.", show_alert=True)
-
-    elif query.data == 'activate_trial':
-        mp = db.get_plan(query.from_user.id)
-        if mp['trial']:
-            return await query.message.edit('You already used trial, use /plan to activate plan')
-        ex = datetime.now() + timedelta(hours=1)
-        mp['expire'] = ex
-        mp['trial'] = True
-        mp['plan'] = '1 hour'
-        mp['premium'] = True
-        db.update_plan(query.from_user.id, mp)
-        await query.message.edit(f"Congratulations! Your activated trial for 1 hour\nExpire: {ex.strftime('%Y.%m.%d %H:%M:%S')}")
-
-    elif query.data == 'activate_plan':
-        q = await query.message.edit('How many days you need premium plan?\nSend days as number')
-        msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        try:
-            d = int(msg.text)
-        except:
-            await q.delete()
-            return await query.message.reply('Invalid number\nIf you want 7 days then send 7 only')
-        transaction_note = f'{d} days premium plan for {query.from_user.id}'
-        amount = d * PRE_DAY_AMOUNT
-        upi_uri = f"upi://pay?pa={UPI_ID}&pn={UPI_NAME}&am={amount}&cu=INR&tn={transaction_note}"
-        qr = qrcode.make(upi_uri)
-        p = f"upi_qr_{query.from_user.id}.png"
-        qr.save(p)
-        await q.delete()
-        await query.message.reply_photo(p, caption=f"{d} days premium plan amount is {amount} INR\nScan this QR in your UPI support platform and pay that amount (This is dynamic QR)\n\nSend your receipt as photo in here (timeout in 10 mins)\n\nSupport: {RECEIPT_SEND_USERNAME}")
-        os.remove(p)
-        try:
-            msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id, timeout=600)
-        except ListenerTimeout:
-            await q.delete()
-            return await query.message.reply(f'Your time is over, send your receipt to: {RECEIPT_SEND_USERNAME}')
-        if msg.photo:
-            await q.delete()
-            await query.message.reply(f'Your receipt was sent, wait some time\nSupport: {RECEIPT_SEND_USERNAME}')
-            await client.send_photo(RECEIPT_SEND_USERNAME, msg.photo.file_id, transaction_note)
-        else:
-            await q.delete()
-            await query.message.reply(f"Not valid photo, send your receipt to: {RECEIPT_SEND_USERNAME}")
-
-
-
+    
     elif query.data == "start":
         buttons = [[
             InlineKeyboardButton("+ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ +", url=f'http://t.me/{temp.U_NAME}?startgroup=start')
@@ -422,21 +360,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.edit_message_media(
             InputMediaPhoto(random.choice(PICS), caption=script.START_TXT.format(query.from_user.mention, get_wish())),
-            reply_markup=reply_markup
-        )
-        
-    elif query.data == "about":
-        buttons = [[
-            InlineKeyboardButton('📊 sᴛᴀᴛᴜs 📊', callback_data='stats'),
-            InlineKeyboardButton('🤖 sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ 🤖', callback_data='source')
-        ],[
-            InlineKeyboardButton('🧑‍💻 ʙᴏᴛ ᴏᴡɴᴇʀ 🧑‍💻', callback_data='owner')
-        ],[
-            InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='start')
-        ]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.MY_ABOUT_TXT),
             reply_markup=reply_markup
         )
 
@@ -464,27 +387,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InputMediaPhoto(random.choice(PICS), caption=script.STATUS_TXT.format(users, prm, chats, used_data_db_size, files, used_files_db_size, secnd_files, secnd_files_db_used_size, uptime)),
             reply_markup=InlineKeyboardMarkup(buttons)
         )
-    
-    elif query.data == "owner":
-        buttons = [[InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='about')]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.MY_OWNER_TXT),
-            reply_markup=reply_markup
-        )
-        
-    elif query.data == "help":
-        buttons = [[
-            InlineKeyboardButton('User Command', callback_data='user_command'),
-            InlineKeyboardButton('Admin Command', callback_data='admin_command')
-        ],[
-            InlineKeyboardButton('« ʙᴀᴄᴋ', callback_data='start')
-        ]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.HELP_TXT.format(query.from_user.mention)),
-            reply_markup=reply_markup
-        )
 
     elif query.data == "user_command":
         buttons = [[
@@ -505,16 +407,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.edit_message_media(
             InputMediaPhoto(random.choice(PICS), caption=script.ADMIN_COMMAND_TXT),
-            reply_markup=reply_markup
-        )
-
-    elif query.data == "source":
-        buttons = [[
-            InlineKeyboardButton('≼ ʙᴀᴄᴋ', callback_data='about')
-        ]]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await query.edit_message_media(
-            InputMediaPhoto(random.choice(PICS), caption=script.SOURCE_TXT),
             reply_markup=reply_markup
         )
   
@@ -778,79 +670,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         deleted = await delete_files(query_)
         await query.message.edit(f'Deleted {deleted} files in your database in your query {query_}')
      
-    elif query.data.startswith("send_all"):
-        ident, key, req = query.data.split("#")
-        if int(req) != query.from_user.id:
-            return await query.answer(f"Hello {query.from_user.first_name},\nDon't Click Other Results!", show_alert=True)        
-        files = temp.FILES.get(key)
-        if not files:
-            await query.answer(f"Hello {query.from_user.first_name},\nSend New Request Again!", show_alert=True)
-            return        
-        await query.answer(url=f"https://t.me/{temp.U_NAME}?start=all_{query.message.chat.id}_{key}")
-
-    elif query.data == "unmute_all_members":
-        if not await is_check_admin(client, query.message.chat.id, query.from_user.id):
-            await query.answer("This Is Not For You!", show_alert=True)
-            return
-        users_id = []
-        await query.message.edit("Unmute all started! This process maybe get some time...")
-        try:
-            async for member in client.get_chat_members(query.message.chat.id, filter=enums.ChatMembersFilter.RESTRICTED):
-                users_id.append(member.user.id)
-            for user_id in users_id:
-                await client.unban_chat_member(query.message.chat.id, user_id)
-        except Exception as e:
-            await query.message.delete()
-            await query.message.reply(f'Something went wrong.\n\n<code>{e}</code>')
-            return
-        await query.message.delete()
-        if users_id:
-            await query.message.reply(f"Successfully unmuted <code>{len(users_id)}</code> users.")
-        else:
-            await query.message.reply('Nothing to unmute users.')
-
-    elif query.data == "unban_all_members":
-        if not await is_check_admin(client, query.message.chat.id, query.from_user.id):
-            await query.answer("This Is Not For You!", show_alert=True)
-            return
-        users_id = []
-        await query.message.edit("Unban all started! This process maybe get some time...")
-        try:
-            async for member in client.get_chat_members(query.message.chat.id, filter=enums.ChatMembersFilter.BANNED):
-                users_id.append(member.user.id)
-            for user_id in users_id:
-                await client.unban_chat_member(query.message.chat.id, user_id)
-        except Exception as e:
-            await query.message.delete()
-            await query.message.reply(f'Something went wrong.\n\n<code>{e}</code>')
-            return
-        await query.message.delete()
-        if users_id:
-            await query.message.reply(f"Successfully unban <code>{len(users_id)}</code> users.")
-        else:
-            await query.message.reply('Nothing to unban users.')
-
-    elif query.data == "kick_muted_members":
-        if not await is_check_admin(client, query.message.chat.id, query.from_user.id):
-            await query.answer("This Is Not For You!", show_alert=True)
-            return
-        users_id = []
-        await query.message.edit("Kick muted users started! This process maybe get some time...")
-        try:
-            async for member in client.get_chat_members(query.message.chat.id, filter=enums.ChatMembersFilter.RESTRICTED):
-                users_id.append(member.user.id)
-            for user_id in users_id:
-                await client.ban_chat_member(query.message.chat.id, user_id, datetime.now() + timedelta(seconds=30))
-        except Exception as e:
-            await query.message.delete()
-            await query.message.reply(f'Something went wrong.\n\n<code>{e}</code>')
-            return
-        await query.message.delete()
-        if users_id:
-            await query.message.reply(f"Successfully kicked muted <code>{len(users_id)}</code> users.")
-        else:
-            await query.message.reply('Nothing to kick muted users.')
-
     elif query.data == "kick_deleted_accounts_members":
         if not await is_check_admin(client, query.message.chat.id, query.from_user.id):
             await query.answer("This Is Not For You!", show_alert=True)
