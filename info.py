@@ -46,52 +46,44 @@ def get_int_env(name: str, default: int) -> int:
 
 
 # ---------------- BOT INFO ---------------- #
-API_ID = int(get_required_env("API_ID"))
-API_HASH = get_required_env("API_HASH")
-BOT_TOKEN = get_required_env("BOT_TOKEN")
+API_ID = int(get_required_env("API_ID", "2468192"))
+API_HASH = get_required_env("API_HASH", "4906b3f8f198ec0e24edb2c197677678")
+BOT_TOKEN = get_required_env("BOT_TOKEN","")
 BOT_ID = int(BOT_TOKEN.split(":")[0])
 PORT = get_int_env("PORT", 8080)
 
 # ---------------- IMAGES ---------------- #
-PICS = environ.get("PICS", "").split() or ["https://i.postimg.cc/8C15CQ5y/1.png"]
+PICS = environ.get("PICS", "https://envs.sh/t3L.jpg").split() or ["https://envs.sh/t3L.jpg"]
 
 # ---------------- ADMINS ---------------- #
-ADMINS = [int(x) for x in get_required_env("ADMINS").split()]
+ADMINS = [int(x) for x in get_required_env("ADMINS", "2068233407 2098589219").split()]
 
 # ---------------- CHANNELS ---------------- #
-INDEX_CHANNELS = [int(x) if x.startswith("-") else x for x in environ.get("INDEX_CHANNELS", "").split()]
-LOG_CHANNEL = int(get_required_env("LOG_CHANNEL"))
-SUPPORT_GROUP = int(get_required_env("SUPPORT_GROUP"))
-BIN_CHANNEL = int(get_required_env("BIN_CHANNEL"))
+INDEX_CHANNELS = [int(x) if x.startswith("-") else x for x in environ.get("INDEX_CHANNELS", "-1001892397342").split()]
+LOG_CHANNEL = int(get_required_env("LOG_CHANNEL", "-1001693006436"))
+SUPPORT_GROUP = int(get_required_env("SUPPORT_GROUP", "-1002358414912"))
+DELETE_CHANNELS = [int(dch) if id_pattern.search(dch) else dch for dch in environ.get('DELETE_CHANNELS', '-1001396923650').split()]
 
 # ---------------- DATABASES ---------------- #
 DATA_DATABASE_URL = get_required_env("DATA_DATABASE_URL")
 FILES_DATABASE_URL = get_required_env("FILES_DATABASE_URL")
 SECOND_FILES_DATABASE_URL = environ.get("SECOND_FILES_DATABASE_URL", "")
 
-DATABASE_NAME = environ.get("DATABASE_NAME", "Cluster0")
+DATABASE_NAME = environ.get("DATABASE_NAME", "Autof1")
 COLLECTION_NAME = environ.get("COLLECTION_NAME", "Files")
 
 # ---------------- LINKS ---------------- #
-SUPPORT_LINK = environ.get("SUPPORT_LINK", "https://t.me/HA_Bots_Support")
-UPDATES_LINK = environ.get("UPDATES_LINK", "https://t.me/HA_Bots")
-FILMS_LINK = environ.get("FILMS_LINK", "https://t.me/HA_Films_World")
-TUTORIAL = environ.get("TUTORIAL", "https://t.me/HA_Bots")
-VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/HA_Bots")
+SUPPORT_LINK = environ.get("SUPPORT_LINK", "https://t.me/Sandalwood_Kannada_Group")
+UPDATES_LINK = environ.get("UPDATES_LINK", "https://t.me/+pCz5eoun5Zk5YzRl")
+FILMS_LINK = environ.get("FILMS_LINK", "https://t.me/sandalwood_kannada_moviesz")
+TUTORIAL = environ.get("TUTORIAL", "https://t.me/how_to_opan_linkz/6")
+VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/how_to_opan_linkz/6")
 
 # ---------------- BOT SETTINGS ---------------- #
 TIME_ZONE = environ.get("TIME_ZONE", "Asia/Colombo")
 DELETE_TIME = get_int_env("DELETE_TIME", 3600)
 CACHE_TIME = get_int_env("CACHE_TIME", 300)
 MAX_BTN = get_int_env("MAX_BTN", 8)
-
-LANGUAGES = [x.lower() for x in environ.get(
-    "LANGUAGES", "hindi english telugu tamil kannada malayalam marathi punjabi"
-).split()]
-
-QUALITY = [x.lower() for x in environ.get(
-    "QUALITY", "360p 480p 720p 1080p 2160p"
-).split()]
 
 IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", script.IMDB_TEMPLATE)
 FILE_CAPTION = environ.get("FILE_CAPTION", script.FILE_CAPTION)
@@ -114,17 +106,6 @@ LINK_MODE = is_enabled("LINK_MODE", False)
 IMDB = is_enabled("IMDB", False)
 SPELL_CHECK = is_enabled("SPELL_CHECK", True)
 SHORTLINK = is_enabled("SHORTLINK", False)
-
-# ---------------- URL ---------------- #
-URL = get_required_env("URL")
-if URL.startswith(("https://", "http://")):
-    if not URL.endswith("/"):
-        URL += "/"
-elif is_valid_ip(URL):
-    URL = f"http://{URL}/"
-else:
-    logger.error("URL is not valid. Exiting now.")
-    exit(1)
 
 # ---------------- REACTIONS & STICKERS ---------------- #
 REACTIONS = environ.get(
