@@ -68,6 +68,9 @@ if len(SUPPORT_GROUP) == 0:
 else:
     SUPPORT_GROUP = int(SUPPORT_GROUP)
 
+# List of group IDs where delete is allowed
+DELETE_CHANNELS = list(map(int, os.getenv("DELETE_CHANNELS", "-1001396923650").split()))
+
 # MongoDB information
 DATA_DATABASE_URL = environ.get('DATA_DATABASE_URL', "")
 if len(DATA_DATABASE_URL) == 0:
