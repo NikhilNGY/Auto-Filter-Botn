@@ -1,14 +1,24 @@
-hydrogram
+# Core
+pyrogram==2.0.106
 tgcrypto
-pymongo
-motor
-cinemagoer
-shortzy
+uvloop
+pytz
+requests
 aiohttp
 aiofiles
+
+# Database
+pymongo
+motor
+dnspython   # required for MongoDB SRV URIs
+
+# Extra utilities
+cinemagoer
+shortzy
 speedtest-cli
-uvloop
-requests
 qrcode
 Pillow
-pytz
+
+# Web (for Koyeb health check)
+flask
+gunicorn
