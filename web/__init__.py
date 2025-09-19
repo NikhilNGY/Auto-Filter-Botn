@@ -1,10 +1,20 @@
+# @Nikhil5757h 
 from aiohttp import web
 
-# Minimal aiohttp web app for health check
-web_app = web.Application()
+# Create aiohttp app
+app = web.Application()
 
+# ------------------------
+# Health check endpoint
+# ------------------------
 async def handle_health(request):
-    return web.Response(text="Bot is running ✓")
+    return web.Response(text="Bot is running ✓", status=200)
 
-# Add health check route
-web_app.add_routes([web.get("/", handle_health)])
+# Add route
+app.add_routes([web.get("/", handle_health)])
+
+# ------------------------
+# Run web server
+# ------------------------
+if __name__ == "__main__":
+    web.run_app(app, host="0.0.0.0", port=8080)
