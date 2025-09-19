@@ -198,8 +198,6 @@ async def next_page(bot: Client, query: CallbackQuery):
             send_all_btn = [
                 InlineKeyboardButton("•  Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ  •", url=f"https://t.me/sandalwood_kannada_moviesz")
                 ]
-                )
-            ]
         else:
             send_all_btn = [InlineKeyboardButton("•  Bᴀᴄᴋ Uᴘ Cʜᴀɴɴᴇʟ  •", url=f"https://t.me/sandalwood_kannada_moviesz")
                 ]
