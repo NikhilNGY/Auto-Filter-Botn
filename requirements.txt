@@ -19,5 +19,5 @@ speedtest-cli
 qrcode
 Pillow
 
-# Web health
-# (Use aiohttp or other, depending on your web server)
+flask==2.3.3
+gunicorn==21.2.0
