@@ -1,13 +1,15 @@
-from flask import Flask, jsonify
+from aiohttp import web
+import json
 
-# Minimal Flask app
-web_app = Flask(__name__)
+# Create aiohttp web application
+web_app = web.Application()
 
-@web_app.route("/", methods=["GET"])
-def index():
-    return jsonify({"status": "ok", "message": "Bot is running!"})
+async def index(request):
+    return web.json_response({"status": "ok", "message": "Bot is running!"})
 
-# Optional: health check endpoint for Koyeb
-@web_app.route("/healthz", methods=["GET"])
-def health_check():
-    return "OK", 200
+async def health_check(request):
+    return web.Response(text="OK", status=200)
+
+# Add routes
+web_app.router.add_get("/", index)
+web_app.router.add_get("/healthz", health_check)
