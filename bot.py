@@ -3,11 +3,12 @@ import os
 import time
 import asyncio
 import uvloop
-from hydrogram import types, Client
+from pyrogram import types, Client
 from typing import Union, AsyncGenerator
 from info import LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT, ADMINS
 from utils import temp
 from database.users_chats_db import db
+from aiohttp import web
 
 uvloop.install()
 
@@ -17,7 +18,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
-logging.getLogger('hydrogram').setLevel(logging.ERROR)
+logging.getLogger('pyrogram').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
