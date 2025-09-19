@@ -1,14 +1,23 @@
-pyrogram
+# Core
+hydrogram==0.2.0
 tgcrypto
-pymongo
-motor
-cinemagoer
-shortzy
+uvloop
+pytz
+requests
 aiohttp
 aiofiles
+
+# Database
+pymongo
+motor
+dnspython
+
+# Extras
+cinemagoer
+shortzy
 speedtest-cli
-uvloop
-requests
 qrcode
 Pillow
-pytz
+
+# Web health
+# (Use aiohttp or other, depending on your web server)
