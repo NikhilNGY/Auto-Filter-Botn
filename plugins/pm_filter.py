@@ -39,12 +39,12 @@ async def pm_search(client: Client, message):
         s = await message.reply(f"<b><i>⚠️ `{message.text}` searching...</i></b>", quote=True)
         await auto_filter(client, message, s)
     else:
-        # Non-premium: show limited search
+        # Non-premium: show same as original search
         files, n_offset, total = await db.get_search_results(message.text)
 
         btn = [
             [InlineKeyboardButton("🗂 ᴄʟɪᴄᴋ ʜᴇʀᴇ 🗂", url=FILMS_LINK)],
-            [InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
+            [InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")]
         ]
         reply_markup = InlineKeyboardMarkup(btn)
 
@@ -91,30 +91,6 @@ async def group_search(client: Client, message):
     if message.text.startswith("/"):
         return
 
-    # Admin mentions handling
-    if '@admin' in message.text.lower() or '@admins' in message.text.lower():
-        if await is_check_admin(client, chat_id, user_id):
-            return
-
-        admins = []
-        async for member in client.get_chat_members(chat_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            if not member.user.is_bot:
-                admins.append(member.user.id)
-                if member.status == enums.ChatMemberStatus.OWNER:
-                    target_msg = message.reply_to_message or message
-                    try:
-                        sent_msg = await target_msg.forward(member.user.id)
-                        await sent_msg.reply_text(
-                            f"#Attention\n★ User: {user.mention}\n★ Group: {message.chat.title}\n\n"
-                            f"★ <a href={target_msg.link}>Go to message</a>",
-                            disable_web_page_preview=True
-                        )
-                    except:
-                        pass
-        hidden_mentions = ''.join(f'[\u2064](tg://user?id={uid})' for uid in admins)
-        await message.reply_text('Report sent!' + hidden_mentions)
-        return
-
     # Link protection
     if re.findall(r'https?://\S+|www\.\S+|t\.me/\S+|@\w+', message.text):
         if await is_check_admin(client, chat_id, user_id):
@@ -124,18 +100,6 @@ async def group_search(client: Client, message):
         except:
             pass
         await message.reply('Links are not allowed here!')
-        return
-
-    # Requests handling
-    if '#request' in message.text.lower():
-        if user_id in ADMINS:
-            return
-        await client.send_message(
-            LOG_CHANNEL,
-            f"#Request\n★ User: {user.mention}\n★ Group: {message.chat.title}\n\n"
-            f"★ Message: {re.sub(r'#request', '', message.text, flags=re.IGNORECASE)}"
-        )
-        await message.reply_text("Request sent!")
         return
 
     # Auto-filter search
@@ -227,7 +191,7 @@ async def next_page(bot: Client, query: CallbackQuery):
 
         # Build final buttons
         btn.insert(0, send_all_btn)
-        btn.append([InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")
+        btn.append([InlineKeyboardButton("⚔️  ಕನ್ನಡ ಹೊಸ ಮೂವೀಗಳು  ⚔️", url=f"https://t.me/KR_PICTURE")])
         btn.append(page_btn)
 
         await query.message.edit_text(
