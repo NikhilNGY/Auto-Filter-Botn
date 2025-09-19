@@ -2,7 +2,7 @@ import re
 import asyncio
 from hydrogram import Client, filters
 from hydrogram.types import InlineKeyboardMarkup
-from database import filters_col  # MongoDB collection for filters
+from database.ia_filterdb import filters_col
 from config import AUTO_DELETE, ADMINS
 
 # ------------------------------
