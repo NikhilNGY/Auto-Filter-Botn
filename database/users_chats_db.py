@@ -55,6 +55,8 @@ class Database:
         self.req = data_db.Requests
         self.con = data_db.Connections
         self.stg = data_db.Settings
+        self.files = files_db.Files
+        self.second_files = second_files_db.Files if SECOND_FILES_DATABASE_URL else None
 
     # -------------------------
     # User methods
@@ -64,25 +66,26 @@ class Database:
             'id': id,
             'name': name,
             'ban_status': {'is_banned': False, 'ban_reason': ""},
+            'premium': False,
             'verify_status': self.default_verify
         }
 
-    async def add_user(self, id, name):
+    def add_user(self, id, name):
         self.col.insert_one(self.new_user(id, name))
 
-    async def is_user_exist(self, id):
+    def is_user_exist(self, id):
         return bool(self.col.find_one({'id': int(id)}))
 
-    async def total_users_count(self):
+    def total_users_count(self):
         return self.col.count_documents({})
 
-    async def get_all_users(self):
+    def get_all_users(self):
         return list(self.col.find({}))
 
-    async def delete_user(self, user_id):
+    def delete_user(self, user_id):
         self.col.delete_many({'id': int(user_id)})
 
-    async def get_verify_status(self, user_id):
+    def get_verify_status(self, user_id):
         user = self.col.find_one({'id': int(user_id)})
         if user:
             info = user.get('verify_status', self.default_verify)
@@ -91,8 +94,14 @@ class Database:
             return info
         return self.default_verify
 
-    async def update_verify_status(self, user_id, verify):
+    def update_verify_status(self, user_id, verify):
         self.col.update_one({'id': int(user_id)}, {'$set': {'verify_status': verify}})
+
+    def get_banned(self):
+        return [u['id'] for u in self.col.find({'ban_status.is_banned': True})]
+
+    def get_premium_count(self):
+        return self.col.count_documents({'premium': True})
 
     # -------------------------
     # Group methods
@@ -105,34 +114,31 @@ class Database:
             'settings': self.default_setgs
         }
 
-    async def add_chat(self, chat, title):
+    def add_chat(self, chat, title):
         self.grp.insert_one(self.new_group(chat, title))
 
-    async def get_chat(self, chat):
+    def get_chat(self, chat):
         data = self.grp.find_one({'id': int(chat)})
         return data.get('chat_status') if data else False
 
-    async def re_enable_chat(self, id):
+    def re_enable_chat(self, id):
         self.grp.update_one({'id': int(id)}, {'$set': {'chat_status': {'is_disabled': False, 'reason': ""}}})
 
-    async def update_settings(self, id, settings):
+    def update_settings(self, id, settings):
         self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
 
-    async def get_settings(self, id):
+    def get_settings(self, id):
         chat = self.grp.find_one({'id': int(id)})
         return chat.get('settings', self.default_setgs) if chat else self.default_setgs
 
-    async def disable_chat(self, chat, reason="No Reason"):
+    def disable_chat(self, chat, reason="No Reason"):
         self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': {'is_disabled': True, 'reason': reason}}})
 
-    async def total_chat_count(self):
+    def total_chat_count(self):
         return self.grp.count_documents({})
 
-    async def get_all_chats(self):
+    def get_all_chats(self):
         return list(self.grp.find({}))
-
-    async def get_all_chats_count(self):
-        return self.grp.count_documents({})
 
     # -------------------------
     # Connections
@@ -156,20 +162,20 @@ class Database:
         self.stg.update_one({'id': BOT_ID}, {'$set': {var: val}}, upsert=True)
 
     def get_bot_sttgs(self):
-        return self.stg.find_one({'id': BOT_ID})
+        return self.stg.find_one({'id': BOT_ID}) or {}
 
     # -------------------------
     # Database sizes
     # -------------------------
-    async def get_files_db_size(self):
+    def get_files_db_size(self):
         return files_db.command("dbstats")['dataSize']
 
-    async def get_second_files_db_size(self):
-        if SECOND_FILES_DATABASE_URL:
+    def get_second_files_db_size(self):
+        if self.second_files:
             return second_files_db.command("dbstats")['dataSize']
         return 0
 
-    async def get_data_db_size(self):
+    def get_data_db_size(self):
         return data_db.command("dbstats")['dataSize']
 
 
