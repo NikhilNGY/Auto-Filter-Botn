@@ -22,3 +22,20 @@ Pillow
 # Web
 flask==2.3.3
 gunicorn==21.2.0
+aiofiles
+aiohttp
+cinemagoer
+dnspython
+flask==2.3.3
+gunicorn==21.2.0
+hydrogram==0.2.0
+motor
+Pillow
+pymongo
+pytz
+qrcode
+requests
+shortzy
+speedtest-cli
+tgcrypto
+uvloop
