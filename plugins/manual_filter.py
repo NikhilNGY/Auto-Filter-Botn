@@ -3,7 +3,7 @@ import asyncio
 from hydrogram import Client, filters
 from hydrogram.types import InlineKeyboardMarkup
 from database.ia_filterdb import filters_col
-from config info AUTO_DELETE, ADMINS
+from info import AUTO_DELETE, ADMINS
 
 # ------------------------------
 # Add a manual filter with optional media
