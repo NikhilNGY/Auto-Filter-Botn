@@ -1,9 +1,9 @@
+# @Nikhil5757h 
 import asyncio
 import re
 import requests
 import pytz
 from datetime import datetime
-
 from hydrogram.errors import UserNotParticipant, FloodWait
 from hydrogram import enums
 from hydrogram.types import InlineKeyboardButton
@@ -15,7 +15,8 @@ from shortzy import Shortzy
 imdb = Cinemagoer()
 
 
-class temp:
+class Temp:
+    """Global temporary storage."""
     START_TIME = 0
     ME = None
     CANCEL = False
@@ -30,7 +31,37 @@ class temp:
     BANNED_USERS = []
     BANNED_CHATS = []
 
+temp = Temp()
 
+
+# -------------------------
+# Bot initialization
+# -------------------------
+async def init_banned_chats():
+    """Load disabled chats into memory."""
+    all_chats = await db.get_all_chats()
+    temp.BANNED_CHATS = [
+        c['id'] for c in all_chats if c.get('chat_status', {}).get('is_disabled')
+    ]
+
+
+async def init_group_settings():
+    """Load all group settings into memory."""
+    all_chats = await db.get_all_chats()
+    for chat in all_chats:
+        temp.SETTINGS[chat['id']] = chat.get('settings', {})
+
+
+async def startup(bot):
+    """Call this after bot starts."""
+    temp.BOT = bot
+    await init_banned_chats()
+    await init_group_settings()
+
+
+# -------------------------
+# Helper Functions
+# -------------------------
 async def is_subscribed(bot, query):
     """Check if user is subscribed to required channels."""
     btn = []
@@ -44,10 +75,7 @@ async def is_subscribed(bot, query):
             try:
                 await bot.get_chat_member(int(id), query.from_user.id)
             except UserNotParticipant:
-                btn.append([
-                    InlineKeyboardButton(f'Join : {chat.title}',
-                                         url=chat.invite_link)
-                ])
+                btn.append([InlineKeyboardButton(f'Join : {chat.title}', url=chat.invite_link)])
     return btn
 
 
@@ -66,7 +94,7 @@ def upload_image(file_path):
 
 
 # ------------------------------
-# Broadcast to users
+# Broadcast Functions
 # ------------------------------
 async def broadcast_messages(user_id, message):
     try:
@@ -79,9 +107,6 @@ async def broadcast_messages(user_id, message):
         return False, str(err)
 
 
-# ------------------------------
-# Broadcast to groups
-# ------------------------------
 async def groups_broadcast_messages(chat_id, message):
     try:
         await message.copy(chat_id=chat_id)
@@ -93,6 +118,9 @@ async def groups_broadcast_messages(chat_id, message):
         return False, str(err)
 
 
+# ------------------------------
+# IMDB Functions
+# ------------------------------
 async def get_poster(query, bulk=False, id=False, file=None):
     """Fetch movie/TV info from IMDB."""
     try:
@@ -127,9 +155,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
 
         movie = imdb.get_movie(movieid)
         date = movie.get("original air date") or movie.get("year") or "N/A"
-        plot = (movie.get('plot')
-                or ["N/A"])[0] if not LONG_IMDB_DESCRIPTION else movie.get(
-                    'plot outline') or "N/A"
+        plot = (movie.get('plot') or ["N/A"])[0] if not LONG_IMDB_DESCRIPTION else movie.get('plot outline') or "N/A"
         if plot and len(plot) > 800:
             plot = plot[:800] + "..."
 
@@ -166,32 +192,26 @@ async def get_poster(query, bulk=False, id=False, file=None):
         return None
 
 
+# ------------------------------
+# Admin & Verification
+# ------------------------------
 async def is_check_admin(bot, chat_id, user_id):
-    """Check if a user is admin/owner."""
     try:
         member = await bot.get_chat_member(chat_id, user_id)
-        return member.status in [
-            enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER
-        ]
+        return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
     except Exception:
         return False
 
 
 async def get_verify_status(user_id):
-    """Return user verification status."""
     verify = temp.VERIFICATIONS.get(user_id)
     if not verify:
-        verify = db.get_verify_status(user_id)
+        verify = await db.get_verify_status(user_id)
         temp.VERIFICATIONS[user_id] = verify
     return verify
 
 
-async def update_verify_status(user_id,
-                               verify_token="",
-                               is_verified=False,
-                               link="",
-                               expire_time=0):
-    """Update verification data for user."""
+async def update_verify_status(user_id, verify_token="", is_verified=False, link="", expire_time=0):
     current = await get_verify_status(user_id)
     current.update({
         'verify_token': verify_token,
@@ -200,28 +220,31 @@ async def update_verify_status(user_id,
         'expire_time': expire_time
     })
     temp.VERIFICATIONS[user_id] = current
-    db.update_verify_status(user_id, current)
+    await db.update_verify_status(user_id, current)
 
 
+# ------------------------------
+# Settings
+# ------------------------------
 async def get_settings(group_id):
-    """Return settings for a group."""
     settings = temp.SETTINGS.get(group_id)
     if not settings:
-        settings = db.get_settings(group_id)
+        settings = await db.get_settings(group_id)
         temp.SETTINGS[group_id] = settings
     return settings
 
 
 async def save_group_settings(group_id, key, value):
-    """Update a single group setting."""
     current = await get_settings(group_id)
     current[key] = value
     temp.SETTINGS[group_id] = current
-    db.update_settings(group_id, current)
+    await db.update_settings(group_id, current)
 
 
+# ------------------------------
+# Utils
+# ------------------------------
 def get_size(size):
-    """Return human-readable size string."""
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
     i = 0
@@ -232,14 +255,12 @@ def get_size(size):
 
 
 def list_to_str(lst):
-    """Convert a list to a string."""
     if not lst:
         return "N/A"
     return ", ".join(str(x) for x in lst) if len(lst) > 1 else str(lst[0])
 
 
 async def get_shortlink(url, api, link):
-    """Generate a shortlink."""
     try:
         shortzy = Shortzy(api_key=api, base_site=url)
         return await shortzy.convert(link)
@@ -248,7 +269,6 @@ async def get_shortlink(url, api, link):
 
 
 def get_readable_time(seconds):
-    """Return time in d/h/m/s format."""
     periods = [('d', 86400), ('h', 3600), ('m', 60), ('s', 1)]
     result = ""
     for name, sec in periods:
@@ -259,7 +279,6 @@ def get_readable_time(seconds):
 
 
 def get_wish():
-    """Return greeting based on local time."""
     hour = int(datetime.now(pytz.timezone(TIME_ZONE)).strftime("%H"))
     if hour < 12:
         return "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞"
@@ -270,7 +289,6 @@ def get_wish():
 
 
 async def get_seconds(time_string):
-    """Convert time string like '2h', '5min' to seconds."""
     units_map = {
         "s": 1,
         "min": 60,
