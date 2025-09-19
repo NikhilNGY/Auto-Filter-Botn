@@ -9,6 +9,7 @@ from info import LOG_CHANNEL, API_ID, API_HASH, BOT_TOKEN, PORT, ADMINS
 from utils import temp
 from database.users_chats_db import db
 from aiohttp import web
+from web.app import web_app
 
 uvloop.install()
 
