@@ -1,7 +1,7 @@
 import re
 import asyncio
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup
+from hydrogram import Client, filters
+from hydrogram.types import InlineKeyboardMarkup
 from database import filters_col  # MongoDB collection for filters
 from config import AUTO_DELETE, ADMINS
 
