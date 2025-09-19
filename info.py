@@ -36,7 +36,7 @@ if len(BOT_TOKEN) == 0:
     logger.error('BOT_TOKEN is missing, exiting now')
     exit()
 BOT_ID = BOT_TOKEN.split(":")[0]
-PORT = int(environ.get('PORT', '5000'))
+PORT = int(environ.get('PORT', '8080'))
 
 # Upload your images to "postimages.org" and get direct link
 PICS = (environ.get('PICS', 'https://envs.sh/t3L.jpg')).split()
