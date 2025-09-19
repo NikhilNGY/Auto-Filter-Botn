@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cacert", "freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libuv", "libwebp", "libxcrypt", "openjpeg", "tcl", "tk", "zlib", "mongodb"]
+packages = ["cacert", "freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libuv", "libwebp", "libxcrypt", "mongodb", "openjpeg", "tcl", "tk", "zlib"]
 
 [agent]
 expertMode = true
