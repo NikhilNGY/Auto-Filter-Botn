@@ -38,6 +38,11 @@ if SECOND_FILES_DATABASE_URL:
     second_collection.create_index([("file_name", TEXT)])
 
 # -------------------------
+# Manual Filters Collection
+# -------------------------
+filters_col = db["filters"]
+
+# -------------------------
 # Helper functions
 # -------------------------
 def db_count_documents():
