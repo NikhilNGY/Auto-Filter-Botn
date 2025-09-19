@@ -1,4 +1,4 @@
-# @Nikhil5757h 
+# web/app.py
 from aiohttp import web
 import json
 import asyncio
@@ -6,7 +6,7 @@ import asyncio
 # ------------------------
 # Create aiohttp app
 # ------------------------
-app = web.Application()
+web_app = web.Application()
 
 # ------------------------
 # Index route
@@ -26,11 +26,5 @@ async def health_check(request):
 # ------------------------
 # Add routes
 # ------------------------
-app.router.add_get("/", index)
-app.router.add_get("/healthz", health_check)
-
-# ------------------------
-# Run webserver
-# ------------------------
-if __name__ == "__main__":
-    web.run_app(app, host="0.0.0.0", port=8080)
+web_app.router.add_get("/", index)
+web_app.router.add_get("/healthz", health_check)
