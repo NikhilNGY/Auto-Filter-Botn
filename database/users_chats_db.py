@@ -1,10 +1,9 @@
 from pymongo import MongoClient
-from info import (
-    BOT_ID, ADMINS, DATABASE_NAME, DATA_DATABASE_URL, FILES_DATABASE_URL,
-    SECOND_FILES_DATABASE_URL, IMDB_TEMPLATE, WELCOME_TEXT, LINK_MODE,
-    TUTORIAL, SHORTLINK_URL, SHORTLINK_API, SHORTLINK, FILE_CAPTION,
-    IMDB, WELCOME, SPELL_CHECK, PROTECT_CONTENT, AUTO_DELETE, VERIFY_EXPIRE
-)
+from info import (BOT_ID, ADMINS, DATABASE_NAME, DATA_DATABASE_URL,
+                  FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, IMDB_TEMPLATE,
+                  WELCOME_TEXT, LINK_MODE, TUTORIAL, SHORTLINK_URL,
+                  SHORTLINK_API, SHORTLINK, FILE_CAPTION, IMDB, WELCOME,
+                  SPELL_CHECK, PROTECT_CONTENT, AUTO_DELETE, VERIFY_EXPIRE)
 from datetime import datetime
 
 # -------------------------
@@ -16,6 +15,7 @@ files_db = files_db_client[DATABASE_NAME]
 data_db_client = MongoClient(DATA_DATABASE_URL)
 data_db = data_db_client[DATABASE_NAME]
 
+second_files_db = None
 if SECOND_FILES_DATABASE_URL:
     second_files_db_client = MongoClient(SECOND_FILES_DATABASE_URL)
     second_files_db = second_files_db_client[DATABASE_NAME]
@@ -56,7 +56,7 @@ class Database:
         self.con = data_db.Connections
         self.stg = data_db.Settings
         self.files = files_db.Files
-        self.second_files = second_files_db.Files if SECOND_FILES_DATABASE_URL else None
+        self.second_files = second_files_db.Files if second_files_db else None
 
     # -------------------------
     # User methods
@@ -65,7 +65,10 @@ class Database:
         return {
             'id': id,
             'name': name,
-            'ban_status': {'is_banned': False, 'ban_reason': ""},
+            'ban_status': {
+                'is_banned': False,
+                'ban_reason': ""
+            },
             'premium': False,
             'verify_status': self.default_verify
         }
@@ -90,15 +93,25 @@ class Database:
         if user:
             info = user.get('verify_status', self.default_verify)
             if info.get('expire_time') == 0:
-                info['expire_time'] = info.get('verified_time', 0) + VERIFY_EXPIRE
+                info['expire_time'] = info.get('verified_time',
+                                               0) + VERIFY_EXPIRE
             return info
         return self.default_verify
 
     def update_verify_status(self, user_id, verify):
-        self.col.update_one({'id': int(user_id)}, {'$set': {'verify_status': verify}})
+        self.col.update_one({'id': int(user_id)},
+                            {'$set': {
+                                'verify_status': verify
+                            }})
 
     def get_banned(self):
-        return [u['id'] for u in self.col.find({'ban_status.is_banned': True})]
+        banned_users = [
+            u['id'] for u in self.col.find({'ban_status.is_banned': True})
+        ]
+        banned_chats = [
+            c['id'] for c in self.grp.find({'chat_status.is_disabled': True})
+        ]
+        return banned_users, banned_chats
 
     def get_premium_count(self):
         return self.col.count_documents({'premium': True})
@@ -110,7 +123,10 @@ class Database:
         return {
             'id': id,
             'title': title,
-            'chat_status': {'is_disabled': False, 'reason': ""},
+            'chat_status': {
+                'is_disabled': False,
+                'reason': ""
+            },
             'settings': self.default_setgs
         }
 
@@ -122,17 +138,32 @@ class Database:
         return data.get('chat_status') if data else False
 
     def re_enable_chat(self, id):
-        self.grp.update_one({'id': int(id)}, {'$set': {'chat_status': {'is_disabled': False, 'reason': ""}}})
+        self.grp.update_one(
+            {'id': int(id)},
+            {'$set': {
+                'chat_status': {
+                    'is_disabled': False,
+                    'reason': ""
+                }
+            }})
 
     def update_settings(self, id, settings):
         self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
 
     def get_settings(self, id):
         chat = self.grp.find_one({'id': int(id)})
-        return chat.get('settings', self.default_setgs) if chat else self.default_setgs
+        return chat.get('settings',
+                        self.default_setgs) if chat else self.default_setgs
 
     def disable_chat(self, chat, reason="No Reason"):
-        self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': {'is_disabled': True, 'reason': reason}}})
+        self.grp.update_one(
+            {'id': int(chat)},
+            {'$set': {
+                'chat_status': {
+                    'is_disabled': True,
+                    'reason': reason
+                }
+            }})
 
     def total_chat_count(self):
         return self.grp.count_documents({})
@@ -147,7 +178,10 @@ class Database:
         user = self.con.find_one({'_id': user_id})
         if user:
             if group_id not in user.get("group_ids", []):
-                self.con.update_one({'_id': user_id}, {"$push": {"group_ids": group_id}})
+                self.con.update_one({'_id': user_id},
+                                    {"$push": {
+                                        "group_ids": group_id
+                                    }})
         else:
             self.con.insert_one({'_id': user_id, 'group_ids': [group_id]})
 

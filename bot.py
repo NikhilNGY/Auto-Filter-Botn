@@ -38,7 +38,7 @@ class Bot(Client):
         temp.START_TIME = time.time()
 
         # Load banned users/chats
-        temp.BANNED_USERS, temp.BANNED_CHATS = await db.get_banned()
+        temp.BANNED_USERS, temp.BANNED_CHATS = db.get_banned()
 
         # Handle restart notification
         if os.path.exists("restart.txt"):
