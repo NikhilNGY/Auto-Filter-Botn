@@ -37,23 +37,23 @@ class Bot(Client):
         await super().start()
         temp.START_TIME = time.time()
 
-        # Load banned users/chats
+        # Load banned users/chats from DB
         temp.BANNED_USERS, temp.BANNED_CHATS = db.get_banned()
 
-        # Handle restart notification
+        # Restart notification
         if os.path.exists("restart.txt"):
             try:
                 with open("restart.txt", "r") as file:
                     chat_id, msg_id = map(int, file.read().split())
-                await self.edit_message_text(chat_id=chat_id, message_id=msg_id, text="Restarted Successfully!")
+                await self.edit_message_text(chat_id=chat_id, message_id=msg_id, text="✅ Restarted Successfully!")
             except Exception:
                 logger.warning("Failed to send restart notification.")
             finally:
                 os.remove("restart.txt")
 
-        # Set bot info
-        temp.BOT = self
+        # Bot info
         me = await self.get_me()
+        temp.BOT = self
         temp.ME = me.id
         temp.U_NAME = me.username
         temp.B_NAME = me.first_name
@@ -72,7 +72,7 @@ class Bot(Client):
             exit()
 
         # ---------------- STARTUP INFO ---------------- #
-        logger.info(f"Bot Started ✓")
+        logger.info("Bot Started ✓")
         logger.info(f"Username: @{me.username}")
         logger.info(f"Bot ID: {temp.ME}")
         logger.info(f"Admins: {ADMINS}")
@@ -102,17 +102,24 @@ class Bot(Client):
                 current += 1
 
 
-# ---------------- RUN FOREVER ---------------- #
-if __name__ == "__main__":
+# ---------------- RUN BOT ---------------- #
+async def run_bot():
     while True:
         try:
             app = Bot()
-            app.run()
+            await app.start()
+            # Keep running
+            while True:
+                await asyncio.sleep(1)
         except Exception as e:
-            if hasattr(e, "value"):  # Catch FloodWait
+            if hasattr(e, "value"):  # FloodWait
                 wait_time = getattr(e, "value", 0)
                 logger.warning(f"FloodWait detected. Sleeping for {wait_time} seconds...")
-                time.sleep(wait_time + 2)
+                await asyncio.sleep(wait_time + 2)
             else:
                 logger.error(f"Unexpected error: {e}. Retrying in 30 seconds...")
-                time.sleep(30)
+                await asyncio.sleep(30)
+
+
+if __name__ == "__main__":
+    asyncio.run(run_bot())
